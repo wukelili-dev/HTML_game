@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>路上</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap');
+body{background:#fafafa;color:#333;font-family:'Noto Serif SC',serif;font-size:14px;line-height:1.8;min-height:100vh;overflow-x:hidden}
+::selection{background:#ccc}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:#ddd}
+
+/* Layout */
+.game-wrapper{max-width:960px;margin:0 auto;padding:12px}
+.header{text-align:center;padding:16px 0 8px;border-bottom:1px solid #ddd;margin-bottom:8px}
+.header h1{font-size:20px;color:#666;font-weight:400;letter-spacing:8px}
+.header .info{font-size:11px;color:#999;margin-top:4px;letter-spacing:2px}
+.main-content{display:flex;gap:12px;min-height:420px}
+.left-panel{flex:1;overflow-y:auto;max-height:480px;padding-right:8px}
+.right-panel{width:240px;flex-shrink:0}
+
+/* Event Log */
+.event-log{padding:8px 0}
+.event-entry{padding:6px 0;border-bottom:1px solid #eee;animation:fadeIn 0.5s ease}
+.event-entry.atmosphere{color:#777;font-style:italic}
+.event-entry.discovery{color:#3a7ca5}
+.event-entry.warning{color:#b8860b}
+.event-entry.good{color:#2e7d32}
+.event-entry.bad{color:#c62828}
+.event-entry.system{color:#999;font-size:12px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* Event Modal */
+.event-modal{
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,0.6);
+  display:flex; align-items:center; justify-content:center;
+  z-index:1000;
+}
+.event-modal.hidden{ display:none; }
+.event-modal-content{
+  background:#fff; padding:24px; border-radius:12px;
+  max-width:480px; width:90%;
+  box-shadow:0 4px 20px rgba(0,0,0,0.2);
+}
+.event-modal-text{
+  font-size:15px; line-height:1.7;
+  white-space:pre-wrap; margin-bottom:20px;
+  color:#333;
+}
+.event-modal-choices{ display:flex; flex-direction:column; gap:8px; }
+.event-modal-btn{
+  padding:12px 16px; text-align:left;
+  background:#f5f5f5; border:none; border-radius:6px;
+  cursor:pointer; font-size:14px;
+  transition:background 0.2s;
+}
+.event-modal-btn:hover{ background:#e8e8e8; }
+.event-modal-btn:disabled{ opacity:0.5; cursor:not-allowed; }
+.event-modal-btn.primary{ background:#3a7ca5; color:#fff; }
+.event-modal-btn.primary:hover{ background:#2d6389; }
+
+/* Status Panel */
+.status-panel{background:#fff;border:1px solid #e0e0e0;padding:12px;margin-bottom:8px;border-radius:4px}
+.status-panel h3{font-size:11px;color:#999;margin-bottom:8px;letter-spacing:3px}
+.stat-row{display:flex;align-items:center;margin-bottom:6px;font-size:12px}
+.stat-row .stat-icon{width:20px;text-align:center}
+.stat-row .stat-name{width:36px;color:#888;font-size:11px}
+.stat-bar{flex:1;height:6px;background:#eee;border-radius:3px;overflow:hidden;margin:0 6px}
+.stat-bar-fill{height:100%;border-radius:3px;transition:width 0.8s ease}
+.stat-bar-fill.hunger{background:#66bb6a}
+.stat-bar-fill.warmth{background:#ffa726}
+.stat-bar-fill.energy{background:#42a5f5}
+.stat-bar-fill.mood{background:#ab47bc}
+.stat-val{width:30px;text-align:right;font-size:11px;color:#999}
+
+.info-row{display:flex;justify-content:space-between;font-size:12px;color:#888;padding:3px 0;border-top:1px solid #eee;margin-top:4px;padding-top:6px}
+.info-row .val{color:#555}
+
+/* Weather */
+.weather-box{text-align:center;padding:8px;background:#fff;border:1px solid #e0e0e0;margin-bottom:8px;border-radius:4px}
+.weather-box .weather-icon{font-size:24px}
+.weather-box .weather-name{font-size:12px;color:#777;margin-top:2px}
+.weather-box .weather-desc{font-size:11px;color:#999;font-style:italic;margin-top:2px}
+
+/* RV Layout */
+.bottom-panel{margin-top:8px;border-top:1px solid #e0e0e0;padding-top:8px}
+.section-title{font-size:11px;color:#999;letter-spacing:3px;margin-bottom:8px}
+.rv-layout{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px}
+.rv-slot{background:#fff;border:1px solid #e0e0e0;padding:8px 10px;cursor:pointer;transition:all 0.2s;min-width:80px;text-align:center;flex:1;border-radius:4px}
+.rv-slot:hover{border-color:#bbb;background:#fafafa}
+.rv-slot .slot-name{font-size:10px;color:#aaa;margin-bottom:2px;letter-spacing:1px}
+.rv-slot .slot-item{font-size:16px}
+.rv-slot .slot-label{font-size:11px;color:#777;margin-top:2px}
+
+/* Storage */
+.storage-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-bottom:12px}
+.storage-cell{aspect-ratio:1;background:#fff;border:1px solid #e0e0e0;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:all 0.2s;position:relative;border-radius:4px}
+.storage-cell:hover{border-color:#bbb;background:#fafafa}
+.storage-cell.empty{opacity:0.4;cursor:default}
+.storage-cell.empty:hover{border-color:#e0e0e0;background:#fff}
+.storage-cell .cell-tip{display:none;position:absolute;bottom:105%;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:3px 8px;font-size:10px;white-space:nowrap;border-radius:3px;z-index:10}
+.storage-cell:hover .cell-tip{display:block}
+
+/* Actions */
+.actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.action-btn{background:#fff;border:1px solid #ddd;color:#666;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:12px;transition:all 0.2s;letter-spacing:1px;border-radius:4px}
+.action-btn:hover{border-color:#999;color:#333;background:#fafafa}
+.action-btn:disabled{opacity:0.4;cursor:not-allowed;border-color:#eee;color:#bbb;background:#fafafa}
+.action-btn.primary{border-color:#81c784;color:#388e3c}
+.action-btn.primary:hover{border-color:#66bb6a;color:#2e7d32}
+.action-btn.danger{border-color:#ef5350;color:#c62828}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.85);z-index:100}
+.modal-overlay.active{display:flex;align-items:center;justify-content:center}
+.modal{background:#fff;border:1px solid #e0e0e0;padding:20px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.1)}
+.modal h2{font-size:14px;color:#666;margin-bottom:12px;letter-spacing:2px}
+.modal .close-btn{float:right;cursor:pointer;color:#bbb;font-size:18px}
+.modal .close-btn:hover{color:#666}
+.modal .item-list{list-style:none}
+.modal .item-entry{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
+.modal .item-entry .item-name{color:#555;font-size:12px}
+.modal .item-entry .item-price{color:#999;font-size:11px}
+.modal .buy-btn{background:none;border:1px solid #ddd;color:#888;padding:2px 8px;cursor:pointer;font-size:11px;font-family:inherit;border-radius:3px}
+.modal .buy-btn:hover{border-color:#81c784;color:#388e3c}
+.modal .buy-btn:disabled{opacity:0.4;cursor:not-allowed}
+
+/* Responsive */
+@media(max-width:640px){
+  .main-content{flex-direction:column}
+  .right-panel{width:100%}
+  .left-panel{max-height:300px}
+  .storage-grid{grid-template-columns:repeat(6,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="game-wrapper">
+  <div class="header">
+    <h1>路 上 <span style="font-size:10px;color:#ccc;letter-spacing:0">v0.4.1</span></h1>
+    <div class="info" id="header-info">第 1 天 · 清晨 · 鹿角湾</div>
+  </div>
+
+  <div class="main-content">
+    <div class="left-panel">
+      <div class="event-log" id="event-log"></div>
+    </div>
+    <div class="right-panel">
+      <div class="weather-box" id="weather-box">
+        <div class="weather-icon" id="weather-icon">🌧️</div>
+        <div class="weather-name" id="weather-name">小雨</div>
+        <div class="weather-desc" id="weather-desc">雨点轻轻打在车顶上</div>
+      </div>
+      <div class="status-panel">
+        <h3>状 态</h3>
+        <div class="stat-row"><span class="stat-icon">🍖</span><span class="stat-name">饱食</span><div class="stat-bar"><div class="stat-bar-fill hunger" id="bar-hunger" style="width:70%"></div></div><span class="stat-val" id="val-hunger">70</span></div>
+        <div class="stat-row"><span class="stat-icon">🌡️</span><span class="stat-name">体温</span><div class="stat-bar"><div class="stat-bar-fill warmth" id="bar-warmth" style="width:65%"></div></div><span class="stat-val" id="val-warmth">65</span></div>
+        <div class="stat-row"><span class="stat-icon">⚡</span><span class="stat-name">体力</span><div class="stat-bar"><div class="stat-bar-fill energy" id="bar-energy" style="width:80%"></div></div><span class="stat-val" id="val-energy">80</span></div>
+        <div class="stat-row"><span class="stat-icon">💚</span><span class="stat-name">心情</span><div class="stat-bar"><div class="stat-bar-fill mood" id="bar-mood" style="width:50%"></div></div><span class="stat-val" id="val-mood">50</span></div>
+        <div class="info-row"><span>💰 金钱</span><span class="val" id="val-money">¥500</span></div>
+        <div class="info-row"><span>⛽ 油量</span><span class="val" id="val-fuel">40L</span></div>
+        <div class="info-row"><span>💧 水量</span><span class="val" id="val-water">20/20L</span></div>
+        <div class="info-row" id="battery-row" style="display:none"><span>🔋 电池</span><div class="stat-bar" style="flex:1;margin:0 6px"><div class="stat-bar-fill energy" id="bar-battery" style="width:0%"></div></div><span class="val" id="val-battery">无</span></div>
+        <div class="info-row"><span>📍 位置</span><span class="val" id="val-location">鹿角湾</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-panel">
+    <div class="section-title">车 厢</div>
+    <div class="rv-layout" id="rv-layout"></div>
+
+    <div class="section-title">储 物 <span id="storage-count" style="color:#e65100;font-weight:700;font-size:12px"></span></div>
+    <div class="storage-grid" id="storage-grid"></div>
+
+    <div class="actions" id="actions"></div>
+  </div>
+</div>
+
+<!-- Shop Modal -->
+<div class="modal-overlay" id="shop-modal">
+  <div class="modal">
+    <span class="close-btn" id="shop-close">✕</span>
+    <h2 id="shop-title">便 利 店</h2>
+    <ul class="item-list" id="shop-list"></ul>
+  </div>
+</div>
+
+<!-- Item Detail Modal -->
+<div class="modal-overlay" id="item-modal">
+  <div class="modal">
+    <span class="close-btn" id="item-close">✕</span>
+    <h2 id="item-title">物品详情</h2>
+    <div id="item-detail"></div>
+  </div>
+</div>
+
+<script>
+// ==================== GAME STATE ====================
+const G = {
+  day: 1,
+  time: 0, // 0=清晨 1=上午 2=下午 3=傍晚 4=夜晚
+  timeNames: ['清晨','上午','下午','傍晚','夜晚'],
+  weather: 'light_rain',
+  location: '鹿角湾',
+  stats: { hunger: 70, warmth: 65, energy: 80, mood: 50 },
+  money: 500,
+  fuel: 40,
+  maxFuel: 100,
+  water: 20,
+  maxWater: 20,
+  battery: 0,
+  maxBattery: 0,
+  hasSolar: false,
+  storage: [],
+  maxStorage: 8,
+  wallSlots: [],
+  maxWall: 2,
+  rvSlots: {
+    driver: { name:'驾驶区', icon:'🚐', item:null, unlockLevel:1 },
+    living: { name:'起居区', icon:'🏠', item:null, unlockLevel:2 },
+    bed:    { name:'睡眠区', icon:'🛏️', item:'薄床垫', unlockLevel:1 },
+    kitchen:{ name:'厨房区', icon:'🍳', item:null, unlockLevel:2 },
+    bath:   { name:'卫浴区', icon:'🚿', item:null, unlockLevel:3 },
+    storage:{ name:'储物区', icon:'📦', item:null, unlockLevel:1 },
+    work:   { name:'工作台', icon:'🔧', item:null, unlockLevel:4 },
+    balcony:{ name:'阳台', icon:'🌅', item:null, unlockLevel:4 },
+    lounge: { name:'客厅', icon:'🛋️', item:null, unlockLevel:5 },
+    secret: { name:'暗格', icon:'🔒', item:null, unlockLevel:5 }
+  },
+  rvLevel: 1, // T1
+  explored: false,
+  driving: false,
+  shopVisited: false
+};
+
+// ==================== RV LEVELS ====================
+const RV_LEVELS = {
+  1: { name: '面包车', icon: '🚐', maxStorage: 8, maxWall: 0, upgradeCost: 1500, waterCapacity: 20, waterUse: 2, batteryCapacity: 0, hasSolar: false, desc: '破旧的面包车，只能勉强睡人。' },
+  2: { name: '小型房车', icon: '🚛', maxStorage: 14, maxWall: 2, upgradeCost: 8000, waterCapacity: 40, waterUse: 2, batteryCapacity: 0, hasSolar: false, desc: '终于有了窗户，可以看雨了。' },
+  3: { name: '中型房车', icon: '🚎', maxStorage: 22, maxWall: 4, upgradeCost: 20000, waterCapacity: 80, waterUse: 3, batteryCapacity: 40, hasSolar: true, desc: '有了卫浴，生活品质提升一大截。' },
+  4: { name: '大型房车', icon: '🏠', maxStorage: 30, maxWall: 6, upgradeCost: 50000, waterCapacity: 120, waterUse: 3, batteryCapacity: 80, hasSolar: true, desc: '可以养宠物了，车厢里有了呼吸。' },
+  5: { name: '豪华房车', icon: '🏰', maxStorage: 40, maxWall: 8, upgradeCost: 100000, waterCapacity: 200, waterUse: 4, batteryCapacity: 150, hasSolar: true, desc: '路上的家，可以请人来做客。' }
+};
+
+// ==================== DATA ====================
+const WEATHERS = {
+  sunny:      { icon:'☀️', name:'晴', desc:'阳光透过车窗洒进来', exploreMod:1.2, moodMod:0, warmthMod:0.5, solarCharge:1.0 },
+  cloudy:     { icon:'⛅', name:'多云', desc:'天空灰蒙蒙的', exploreMod:1, moodMod:0, warmthMod:0, solarCharge:0.5 },
+  light_rain: { icon:'🌧️', name:'小雨', desc:'雨点轻轻打在车顶上', exploreMod:0.9, moodMod:1.5, warmthMod:-0.3, solarCharge:0 },
+  heavy_rain: { icon:'⛈️', name:'暴雨', desc:'雨砸在铁皮上，像有人在外面捶门', exploreMod:0.5, moodMod:-0.5, warmthMod:-1, solarCharge:0 },
+  fog:        { icon:'🌫️', name:'大雾', desc:'雾气把世界吞掉了，十米外什么都看不见', exploreMod:0.6, moodMod:-0.5, warmthMod:0, solarCharge:0.3 },
+  snow:       { icon:'❄️', name:'下雪', desc:'雪花无声地落在挡风玻璃上', exploreMod:0.7, moodMod:1, warmthMod:-1.5, solarCharge:0 }
+};
+
+const LOCATIONS = [
+  { name:'鹿角湾', hasShop:'便利店', desc:'一个小海湾，有加油站和几栋旧房子', fuel:true, water:true, shopItems:['方便面','罐头','矿泉水','压缩饼干','纸巾','蜡烛','巧克力','风景明信片'] },
+  { name:'枯木镇', hasShop:'五金店', desc:'路边的小镇，有个破旧的五金铺', fuel:false, water:true, shopItems:['扳手','防水胶','木板','铁皮','螺丝包','电线','保温棉','小型太阳能板'] },
+  { name:'溪谷营地', hasShop:null, desc:'山谷里的一片空地，溪水声很好听', fuel:false, water:'river', shopItems:[] },
+  { name:'落石坡', hasShop:'加油站', desc:'山坡上的小加油站，孤独地亮着灯', fuel:true, water:true, shopItems:['热狗','咖啡','矿泉水','地图','打火机','墨镜'] },
+  { name:'雾松林', hasShop:null, desc:'松树林里雾气弥漫，地上有松果', fuel:false, water:false, shopItems:[] },
+  { name:'旧码头', hasShop:'杂货铺', desc:'废弃的码头，还有人在这里做买卖', fuel:false, water:'river', shopItems:['鱼干','绳索','望远镜','旧小说','多肉盆栽','粗陶马克杯','LED灯串','风景海报','生鲜蔬菜','鸡蛋','大米'] },
+  { name:'高原驿站', hasShop:'户外店', desc:'高原上的休息站，风很大', fuel:true, water:true, shopItems:['冲锋衣','头灯','睡袋','登山鞋','指南针','多功能刀'] }
+];
+
+const ALL_ITEMS = {
+  '方便面':   { icon:'🍜', type:'food', instant:true, effect:{hunger:25}, moodEffect:-0.5, desc:'干吃也行，但热水泡开更好。这是旅人的主食。', price:6 },
+  '罐头':     { icon:'🥫', type:'food', instant:true, effect:{hunger:35}, moodEffect:0, desc:'午餐肉罐头，开盖就能吃。省着点，这东西不便宜。', price:15 },
+  '矿泉水':   { icon:'💧', type:'drink', effect:{hunger:10}, moodEffect:0, desc:'干净的饮用水。在路上，这就是命。', price:3 },
+  '压缩饼干': { icon:'🍞', type:'food', instant:true, effect:{hunger:40}, moodEffect:-0.5, desc:'像嚼一块没有味道的砖头。但它确实能让你活到明天。', price:8 },
+  '热狗':     { icon:'🌭', type:'food', instant:true, effect:{hunger:30}, moodEffect:1, desc:'加油站的热狗，味道还行，关键是热的。', price:12 },
+  '巧克力':   { icon:'🍫', type:'food', instant:true, effect:{hunger:15}, moodEffect:2, desc:'甜甜的，融化在嘴里的时候，路就没那么长了。', price:12 },
+  '鱼干':     { icon:'🐟', type:'food', instant:true, effect:{hunger:20}, moodEffect:0, desc:'咸咸的，配白粥刚好。', price:10 },
+  '野果':     { icon:'🫐', type:'food', instant:true, effect:{hunger:12}, moodEffect:0.5, desc:'路上摘的，酸酸甜甜。', price:0 },
+  '生鲜蔬菜': { icon:'🥬', type:'ingredient', effect:{}, moodEffect:0, desc:'新鲜的蔬菜，要尽快吃。', price:15 },
+  '鸡蛋':     { icon:'🥚', type:'ingredient', effect:{}, moodEffect:0, desc:'路上不常见的新鲜食材。', price:8 },
+  '大米':     { icon:'🍚', type:'ingredient', effect:{}, moodEffect:0, desc:'一袋米，能吃很久。', price:20 },
+  '新鲜鱼肉': { icon:'🐟', type:'ingredient', effect:{}, moodEffect:0, desc:'刚钓上来的，很新鲜。', price:0 },
+  '纸巾':     { icon:'🧻', type:'tool', effect:{}, moodEffect:0.5, desc:'生活必需品。别小看它。', price:5 },
+  '蜡烛':     { icon:'🕯️', type:'deco', effect:{}, moodEffect:1, desc:'暖黄色的光，让车厢里有了温度。', price:8 },
+  '风景明信片':{ icon:'🖼️', type:'deco', effect:{}, moodEffect:1, desc:'远山的照片，背面写着"wish you were here"。', price:10, wall:true },
+  '扳手':     { icon:'🔧', type:'tool', effect:{}, moodEffect:0, desc:'万能修理工具，有它心里就踏实。', price:40 },
+  '防水胶':   { icon:'🩹', type:'tool', effect:{}, moodEffect:0, desc:'补漏水、粘东西，什么都能凑合。', price:20 },
+  '木板':     { icon:'🪵', type:'material', effect:{}, moodEffect:0, desc:'可以做家具，也可以挡风。', price:15 },
+  '铁皮':     { icon:'🔲', type:'material', effect:{}, moodEffect:0, desc:'补车顶的好材料。', price:20 },
+  '螺丝包':   { icon:'🔩', type:'material', effect:{}, moodEffect:0, desc:'各种型号的螺丝，总有用得上的时候。', price:10 },
+  '电线':     { icon:'🔌', type:'material', effect:{}, moodEffect:0, desc:'修电路用的，小心别触电。', price:15 },
+  '保温棉':   { icon:'🧣', type:'material', effect:{}, moodEffect:0, desc:'贴在车壁上，冬天能救命。', price:25 },
+  '咖啡':     { icon:'☕', type:'drink', effect:{hunger:5,energy:20}, moodEffect:2, desc:'热咖啡。在世界尽头喝到一杯热咖啡，是奢侈。', price:10 },
+  '地图':     { icon:'🗺️', type:'tool', effect:{}, moodEffect:0.5, desc:'纸质地图，上面标着公路和小路。', price:20 },
+  '打火机':   { icon:'🔥', type:'tool', effect:{}, moodEffect:0, desc:'点蜡烛、点灶台，都需要它。', price:5 },
+  '墨镜':     { icon:'🕶️', type:'deco', effect:{}, moodEffect:0.5, desc:'晴天开车必备，看起来还挺酷。', price:25 },
+  '绳索':     { icon:'🪢', type:'tool', effect:{}, moodEffect:0, desc:'绑东西、晾衣服、搭帐篷，万能。', price:15 },
+  '望远镜':   { icon:'🔭', type:'tool', effect:{}, moodEffect:1, desc:'看远处的东西，或者看星星。', price:60 },
+  '旧小说':   { icon:'📖', type:'deco', effect:{}, moodEffect:2, desc:'封面皱了，但故事还是好的。下雨天读最合适。', price:15 },
+  '多肉盆栽': { icon:'🌵', type:'deco', effect:{}, moodEffect:1.5, desc:'圆滚滚的，浇点水就能活。看着它就觉得车厢里有了呼吸。', price:18 },
+  '粗陶马克杯':{ icon:'🫙', type:'deco', effect:{}, moodEffect:0.5, desc:'釉面不太均匀，握在手里却意外地舒服。', price:35 },
+  'LED灯串':  { icon:'✨', type:'deco', effect:{}, moodEffect:2, desc:'暖黄色的小灯，挂起来车厢立刻不一样。', price:30, wall:true },
+  '风景海报': { icon:'🏔️', type:'deco', effect:{}, moodEffect:1.5, desc:'黎明时分的雪山，天空染成橘红和深紫。', price:45, wall:true },
+  '冲锋衣':   { icon:'🧥', type:'tool', effect:{}, moodEffect:0, desc:'防风防雨，外出探索必备。', price:120 },
+  '头灯':     { icon:'💡', type:'tool', effect:{}, moodEffect:0, desc:'腾出双手，在黑暗里也能看清路。', price:35 },
+  '睡袋':     { icon:'🛌', type:'deco', effect:{}, moodEffect:1, desc:'比薄床垫暖和多了。', price:80 },
+  '登山鞋':   { icon:'🥾', type:'tool', effect:{}, moodEffect:0, desc:'踩在什么地上都不怕。', price:100 },
+  '指南针':   { icon:'🧭', type:'tool', effect:{}, moodEffect:0, desc:'迷路的时候，它不会骗你。', price:20 },
+  '小型太阳能板':{ icon:'☀️', type:'solar', effect:{}, moodEffect:0, desc:'装在车顶的小型太阳能板，能充电20kWh。有了它就不用只靠汽油。', price:500 },
+  '多功能刀': { icon:'🗡️', type:'tool', effect:{}, moodEffect:0, desc:'刀、锯、开罐器……一把全搞定。', price:50 },
+  '松果':     { icon:'🌲', type:'material', effect:{}, moodEffect:0, desc:'可以当燃料烧。', price:0 },
+  '漂流木':   { icon:'🪵', type:'material', effect:{}, moodEffect:0, desc:'水边的木头，干了能烧能做东西。', price:0 },
+  '旧报纸':   { icon:'📰', type:'deco', effect:{}, moodEffect:0.3, desc:'昨天的新闻，今天用来引火。', price:0 },
+  '车载收音机':{ icon:'📻', type:'tool', effect:{}, moodEffect:0, desc:'装在驾驶台上的小收音机，能收到几个频段。', price:0 },
+  '便携炉灶': { icon:'🔥', type:'furniture', effect:{}, moodEffect:0, desc:'简易的燃气炉，能做简单的热饭。', price:0, fixed:true },
+  '简易淋浴': { icon:'🚿', type:'furniture', effect:{}, moodEffect:0, desc:'简易的热水淋浴装置。', price:0, fixed:true },
+  
+  // 事件专属物品
+  '贝壳':     { icon:'🐚', type:'deco', effect:{}, moodEffect:1, desc:'白色的贝壳，有细细的纹路，像海浪的形状。', price:0 },
+  '饼干':     { icon:'🍪', type:'food', instant:true, effect:{hunger:15}, moodEffect:0.5, desc:'便利店的饼干，快过期了但还能吃。', price:0 },
+  '野花':     { icon:'🌸', type:'deco', effect:{}, moodEffect:1, desc:'山坡上摘的野花，黄的紫的，很漂亮。2天后会凋谢。', price:0, temp:true },
+  '自制米酒': { icon:'🍶', type:'drink', effect:{hunger:10, warmth:5}, moodEffect:2, desc:'加油站老板自己酿的酒，度数不高但很香。', price:0 },
+  '旧笔记本': { icon:'📓', type:'deco', effect:{}, moodEffect:0.5, desc:'发黄的笔记本，里面写满了看不懂的字。', price:0 },
+  '鱼钩':     { icon:'🪝', type:'tool', effect:{}, moodEffect:0, desc:'生锈的鱼钩，但还能用。', price:0 },
+  '氧气瓶':   { icon:'🫁', type:'tool', effect:{}, moodEffect:0, desc:'便携氧气瓶，高原上用得着。', price:150 }
+};
+
+const WEATHER_KEYS = Object.keys(WEATHERS);
+const EXPLORE_LOOT = {
+  '鹿角湾':   ['野果','漂流木','旧报纸','矿泉水'],
+  '枯木镇':   ['木板','铁皮','螺丝包','旧报纸'],
+  '溪谷营地': ['野果','松果','漂流木','旧报纸'],
+  '落石坡':   ['旧报纸','绳索','松果'],
+  '雾松林':   ['松果','野果','旧报纸','绳索'],
+  '旧码头':   ['漂流木','鱼干','旧报纸','绳索'],
+  '高原驿站': ['松果','野果','旧报纸']
+};
+
+const NARRATIONS = {
+  light_rain: [
+    '雨点打在车顶上，密密麻麻的，像谁在用指尖敲着一面铁鼓。',
+    '窗外的世界模糊成一片灰色，但车厢里，灯还亮着。',
+    '雨声是最好的白噪音。你什么都不用做，只需要听。',
+    '下雨天，车厢里格外安静。安静得能听到自己的呼吸。'
+  ],
+  heavy_rain: [
+    '暴雨砸在铁皮车顶，像有人在外面用拳头捶门。',
+    '雨水从车窗往下淌，外面的世界像一幅被水泡烂的画。',
+    '车在晃。你抱紧了膝盖，等它过去。'
+  ],
+  sunny: [
+    '阳光透过车窗洒进来，尘埃在光柱里打转。',
+    '天晴了。打开车门，空气里有青草和泥土的味道。',
+    '好天气。该出门了。'
+  ],
+  cloudy: [
+    '天空灰蒙蒙的，分不清是上午还是下午。',
+    '云层很低，像要把整条公路压在底下。'
+  ],
+  fog: [
+    '雾从四面八方涌来，十米外什么都看不见。',
+    '雾气把世界吞掉了。你只能看见车头前面两米。'
+  ],
+  snow: [
+    '雪花无声地落在挡风玻璃上，一片一片，慢慢堆起来。',
+    '天地之间全是白的。安静的、冷的白。'
+  ]
+};
+
+const RANDOM_EVENTS = [
+  { text:'一只野猫从车底钻出来，看了你一眼，又消失了。', mood:0.5 },
+  { text:'远处的山线上，有一盏灯亮了一下又灭了。', mood:0 },
+  { text:'收音机里传来一段断续的音乐，旋律很熟悉，但你想不起来。', mood:1 },
+  { text:'风吹过车缝，发出一声长长的口哨。', mood:0.5 },
+  { text:'路边有一束野花，被雨淋得低头耷脑的，但还活着。', mood:1 },
+  { text:'你发现车窗上有一道裂纹，不知道什么时候出现的。', mood:-0.5 },
+  { text:'远处有雷声，隆隆的，像天在翻个身。', mood:0 },
+  { text:'一只鸟停在雨刮器上，歪着头看你。', mood:1 }
+];
+
+// ==================== 地点专属事件 ====================
+const LOCATION_EVENTS = {
+  '鹿角湾': [
+    {
+      id: 'deer_old_boat',
+      text: '沙滩上搁浅着一艘旧船，船身已经烂了一半。有人在上画了涂鸦，写着"永不沉没"。\n你走进去看了看，发现船舱里有一张旧报纸。',
+      effects: [{ type:'item', item:'旧报纸' }, { type:'mood', value:0.5 }]
+    },
+    {
+      id: 'deer_girl_shell',
+      text: '沙滩上有个小女孩在捡贝壳。\n看见你，她跑过来，递给你一个白色的贝壳。\n"这个送你，好看吧？"',
+      effects: [{ type:'item', item:'贝壳' }, { type:'mood', value:1.5 }]
+    },
+    {
+      id: 'deer_sunrise',
+      condition: { time:0, weather:'sunny' },
+      text: '你起得很早。\n海平面上，太阳一点点冒出来，把海染成了金色。\n几只海鸟在晨光里盘旋。\n你坐在沙滩上，看了很久。',
+      effects: [{ type:'mood', value:2 }]
+    },
+    {
+      id: 'deer_shop_chat',
+      text: '买完东西，老板娘擦着柜台，随口问：\n"你一个人在路上啊？不容易。"\n她从柜台下面拿出一包饼干：\n"拿去，快过期的，不吃也浪费了。"',
+      effects: [{ type:'item', item:'饼干' }, { type:'mood', value:1 }]
+    }
+  ],
+  '枯木镇': [
+    {
+      id: 'kumu_barbershop',
+      text: '街角有家老理发店，招牌褪色了。\n老板是个六七十岁的老人，坐在门口抽烟。\n"剪头发？十块。"',
+      choices: [
+        { text:'剪个头', effects:[{ type:'money', value:-10 }, { type:'mood', value:1.5 }] },
+        { text:'算了', effects:[] }
+      ]
+    },
+    {
+      id: 'kumu_mahjong',
+      text: '镇中心的老榕树下，几个老人在打麻将。\n洗牌的声音噼里啪啦，有人在喊"碰！"\n一个小板凳空着。',
+      choices: [
+        { text:'坐下看一局', effects:[{ type:'mood', value:1 }], random:[{ chance:0.3, effects:[{ type:'money', value:50 }] }, { chance:0.3, effects:[{ type:'money', value:-50 }] }] },
+        { text:'不感兴趣', effects:[] }
+      ]
+    },
+    {
+      id: 'kumu_dinner',
+      condition: { time:3 },
+      text: '天黑后，镇上唯一亮着灯的是一家小饭馆。\n门口挂着"红烧肉"的牌子。\n里面有说话声和碗筷的声音。',
+      choices: [
+        { text:'进去吃一顿（¥25）', condition:{ money:25 }, effects:[{ type:'money', value:-25 }, { type:'hunger', value:40 }, { type:'mood', value:2 }] },
+        { text:'买份炒饭带走（¥12）', condition:{ money:12 }, effects:[{ type:'money', value:-12 }, { type:'hunger', value:20 }] },
+        { text:'算了', effects:[] }
+      ]
+    }
+  ],
+  '溪谷营地': [
+    {
+      id: 'creek_wash',
+      text: '溪边有个穿着雨靴的女人在洗衣服。\n肥皂泡顺着水流漂走。\n看见你，她笑着问："要不要帮你洗两件？五块钱。"',
+      choices: [
+        { text:'给她洗（¥5）', condition:{ money:5 }, effects:[{ type:'money', value:-5 }, { type:'mood', value:1 }] },
+        { text:'自己来', effects:[{ type:'energy', value:-10 }] },
+        { text:'算了', effects:[] }
+      ]
+    },
+    {
+      id: 'creek_campfire',
+      condition: { time:3, weather:'sunny' },
+      text: '营地中间有人生起了篝火。\n几个背包客围成一圈，有人在弹吉他。\n"过来坐啊！"有人朝你招手。\n你走过去，他们让出一个位置。\n吉他声混着火光，不知道谁在唱歌。',
+      effects: [{ type:'mood', value:2.5 }]
+    },
+    {
+      id: 'creek_morning',
+      condition: { time:0 },
+      text: '你是被溪水声吵醒的。\n其实不算吵，反而很安静。\n车厢门开着，雾还没散，空气凉凉的。\n你坐在门口，听了一会儿水声。',
+      effects: [{ type:'mood', value:1.5 }]
+    },
+    {
+      id: 'creek_fish',
+      condition: { energy:20 },
+      text: '溪水很清，能看到小鱼在石头缝里游。\n你挽起裤脚，下去摸了一阵。\n摸到一条！滑溜溜的，差点让它跑了。',
+      effects: [{ type:'item', item:'新鲜鱼肉' }, { type:'energy', value:-15 }]
+    }
+  ],
+  '落石坡': [
+    {
+      id: 'luoshi_flowers',
+      text: '山坡上开满了野花，黄的紫的，一片一片的。\n风一吹，像海浪一样晃。\n你摘了几朵，别在车里。',
+      effects: [{ type:'item', item:'野花' }, { type:'mood', value:0.5 }]
+    },
+    {
+      id: 'luoshi_gas_story',
+      text: '加油站的老板是个话很多的老头。\n加油的时候，他一直跟你聊：\n"这条路我跑了几十年了，以前还没这个站呢……"\n聊着聊着，他从柜台下面拿出一瓶酒：\n"自己酿的，带点路上喝。"',
+      effects: [{ type:'item', item:'自制米酒' }, { type:'mood', value:1 }]
+    },
+    {
+      id: 'luoshi_landslide',
+      condition: { afterRain:true },
+      text: '前面的路被石头挡住了一半。\n刚才好像塌了一小块。\n你下车看了看，还能过，但得小心。',
+      choices: [
+        { text:'慢慢开过去', random:[{ chance:0.8, effects:[] }, { chance:0.2, effects:[{ type:'money', value:-150 }], text:'剐蹭到了，需要修理。' }] },
+        { text:'等别人来清理', effects:[{ type:'time', value:2 }], text:'等了几个小时，有路政的人来清理了。' }
+      ]
+    }
+  ],
+  '雾松林': [
+    {
+      id: 'pine_cones',
+      text: '地上全是松果，一个个像小菠萝。\n你捡了几个，松果上还有松脂的味道。',
+      effects: [{ type:'item', item:'松果', count:3 }]
+    },
+    {
+      id: 'pine_lost_path',
+      text: '松林深处好像有一条小路，不太明显。\n你走了一段，发现一个旧木屋。\n门是开着的，里面没有人。\n桌上有一本发黄的笔记本。',
+      choices: [
+        { text:'翻开看看', effects:[{ type:'item', item:'旧笔记本' }], random:[{ chance:0.5, effects:[{ type:'money', value:30 }], text:'笔记本里夹着30块钱！' }] },
+        { text:'不碰，离开', effects:[] }
+      ]
+    },
+    {
+      id: 'pine_needle_tea',
+      text: '有人教过你，松针可以泡茶。\n你摘了一把嫩松针，用开水冲了。\n味道有点涩，但很清新。',
+      effects: [{ type:'hunger', value:5 }, { type:'mood', value:1 }]
+    }
+  ],
+  '旧码头': [
+    {
+      id: 'pier_old_boat',
+      text: '码头边停着一艘废弃的渔船，锈得厉害。\n船舱里有一张破网，还有些散落的鱼钩。\n你翻了翻，找到一个还能用的鱼钩。',
+      effects: [{ type:'item', item:'鱼钩' }]
+    },
+    {
+      id: 'pier_old_fisher',
+      text: '码头上坐着一个抽旱烟的老渔夫。\n鱼竿架在石头上，线垂在水里。\n看见你，他吐了一口烟：\n"年轻人，会钓鱼不？"',
+      choices: [
+        { text:'坐下来学', effects:[{ type:'energy', value:-10 }], random:[{ chance:0.5, effects:[{ type:'item', item:'新鲜鱼肉' }], text:'钓到了一条！' }, { chance:0.5, effects:[], text:'空军了，什么也没钓到。' }] },
+        { text:'不会，算了', effects:[] }
+      ]
+    },
+    {
+      id: 'pier_night_fish',
+      condition: { time:3, weather:'sunny' },
+      text: '月亮倒在水面上，碎碎的波光。\n码头很安静，只有水流的声音。\n你坐在岸边，把脚伸进水里。\n水凉凉的。',
+      effects: [{ type:'mood', value:2 }]
+    }
+  ],
+  '高原驿站': [
+    {
+      id: 'plateau_wind',
+      text: '风太大了。\n车门刚开一条缝，就被吹得差点脱手。\n外面的草全被吹弯了，远处的经幡啪啪地响。\n你坐在车里，听风撞在车身上。',
+      effects: [{ type:'mood', value:0.5 }]
+    },
+    {
+      id: 'plateau_butter_tea',
+      text: '驿站里有人请喝茶。\n是酥油茶，咸咸的，有点像汤。\n"高原上喝这个好，暖和。"\n你喝了一碗，嘴里全是奶香味。',
+      effects: [{ type:'warmth', value:10 }, { type:'mood', value:1 }]
+    },
+    {
+      id: 'plateau_stars',
+      condition: { time:3, weather:'sunny' },
+      text: '高原的夜晚，星星多得看不过来。\n没有光污染，银河像一条亮带子跨过天顶。\n你把车窗打开，冷风灌进来，但值得。',
+      effects: [{ type:'mood', value:3 }]
+    },
+    {
+      id: 'plateau_oxygen',
+      condition: { firstVisit:true },
+      text: '你有点头晕，呼吸也有点急。\n可能是高原反应。',
+      choices: [
+        { text:'躺下休息', effects:[{ type:'mood', value:-0.5 }] },
+        { text:'喝点水', effects:[{ type:'water', value:-5 }, { type:'mood', value:0.5 }] },
+        { text:'吸氧（需氧气瓶）', condition:{ item:'氧气瓶' }, effects:[{ type:'mood', value:1 }] }
+      ]
+    }
+  ]
+};
+
+// 地点事件已触发记录
+let triggeredLocationEvents = {};
+
+// ==================== 通用随机事件 ====================
+const GENERAL_EVENTS = {
+  // 驾驶途中事件
+  drive: [
+    {
+      id: 'drive_hitchhiker',
+      text: '路边站着一个人，背着大包，朝你招手。\n"师傅，能搭一段吗？去前面镇上就行。"',
+      choices: [
+        { text:'停车载他', effects:[{ type:'fuel', value:-10 }, { type:'money', value:50 }, { type:'mood', value:1 }], random:[{ chance:0.3, effects:[{ type:'money', value:30 }] }, { chance:0.3, effects:[{ type:'money', value:80 }] }] },
+        { text:'摆摆手开走', effects:[{ type:'mood', value:-0.5 }] }
+      ]
+    },
+    {
+      id: 'drive_street_food',
+      text: '路边冒着一股香味。\n一辆三轮车上挂着灯泡，老板在翻烤串。\n"来一串？"',
+      choices: [
+        { text:'买烤红薯（¥5）', condition:{ money:5 }, effects:[{ type:'money', value:-5 }, { type:'hunger', value:20 }, { type:'warmth', value:5 }, { type:'mood', value:1 }] },
+        { text:'买煎饼果子（¥8）', condition:{ money:8 }, effects:[{ type:'money', value:-8 }, { type:'hunger', value:35 }, { type:'mood', value:1 }] },
+        { text:'买烤串（¥10）', condition:{ money:10 }, effects:[{ type:'money', value:-10 }, { type:'hunger', value:30 }, { type:'mood', value:1.5 }] },
+        { text:'继续开', effects:[] }
+      ]
+    },
+    {
+      id: 'drive_help_mechanic',
+      text: '前方路边停着一辆车，引擎盖掀着。\n一个人蹲在车头前，满手油污，朝你挥了挥手。',
+      choices: [
+        { text:'停车帮忙', effects:[{ type:'energy', value:-15 }], random:[{ chance:0.3, effects:[{ type:'fuel', value:30 }], text:'对方感激，送了你半桶油。' }, { chance:0.3, effects:[{ type:'money', value:50 }], text:'对方给了你50块感谢费。' }, { chance:0.2, effects:[{ type:'item', item:'扳手' }], text:'对方送了你一把扳手。' }] },
+        { text:'按喇叭开走', effects:[{ type:'mood', value:-0.5 }] }
+      ]
+    },
+    {
+      id: 'drive_beautiful_view',
+      text: '转过一个弯，眼前突然开阔了。\n远处的山被夕阳染成金色，公路像一条丝带蜿蜒在山谷间。\n你下意识松了油门。',
+      effects: [{ type:'mood', value:2 }]
+    },
+    {
+      id: 'drive_animal_cross',
+      text: '前方路上，一群鸭子摇摇晃晃地穿过公路。\n它们完全不着急。\n你停下车，等着。',
+      effects: [{ type:'mood', value:0.5 }],
+      random:[{ chance:0.5, effects:[], text:"不赶路也没关系。" }]
+    },
+    {
+      id: 'drive_rain_storm',
+      condition: { weather:'heavy_rain' },
+      text: '天色突然暗下来，豆大的雨点砸在挡风玻璃上。\n雨刮器拼命地摆，前面什么都看不清。',
+      choices: [
+        { text:'靠边停车等雨停', effects:[{ type:'time', value:2 }], text:'你等了一会儿，雨小了。' },
+        { text:'减速慢行继续开', effects:[{ type:'fuel', value:-5 }], random:[{ chance:0.95, effects:[] }, { chance:0.05, effects:[{ type:'money', value:-200 }], text:'剐蹭到了，需要修理。' }] }
+      ]
+    },
+    {
+      id: 'drive_flat_tire',
+      text: '"砰！"\n方向盘猛地一偏，车歪了一下。\n右后轮瘪了。',
+      choices: [
+        { text:'自己换备胎', condition:{ item:'扳手' }, effects:[{ type:'energy', value:-20 }, { type:'time', value:2 }], text:'你折腾了两个小时，终于换好了。' },
+        { text:'叫救援', effects:[{ type:'money', value:-300 }, { type:'time', value:3 }], text:'等了几个小时，救援来了。' }
+      ]
+    },
+    {
+      id: 'drive_sign_post',
+      text: '一块歪歪斜斜的告示牌立在路边：\n"前方3公里，老周农家乐，土鸡汤，住宿50/晚"',
+      choices: [
+        { text:'记下位置', effects:[{ type:'mood', value:0.5 }] },
+        { text:'不感兴趣', effects:[] }
+      ]
+    }
+  ],
+  
+  // 停留休息事件
+  rest: [
+    {
+      id: 'rest_rain_night',
+      condition: { weather:'light_rain', time:3 },
+      text: '雨打在车顶上，密密密麻的。\n车厢里只有收音机的微弱光。\n你缩在被子里，听着雨声。',
+      effects: [{ type:'mood', value:1 }]
+    },
+    {
+      id: 'rest_morning_sun',
+      condition: { weather:'sunny', time:0 },
+      text: '阳光从窗帘缝隙里挤进来，暖暖的。\n你翻了个身，不想起来。\n外面有鸟叫。',
+      effects: [{ type:'mood', value:1 }]
+    },
+    {
+      id: 'rest_freeze_night',
+      text: '你被冷醒了。\n呼出的气是白的，被子不够厚。',
+      choices: [
+        { text:'开暖风', effects:[{ type:'fuel', value:-5 }, { type:'warmth', value:20 }] },
+        { text:'再裹一层', effects:[{ type:'warmth', value:10 }] },
+        { text:'硬扛', effects:[{ type:'warmth', value:-10 }, { type:'mood', value:-1 }] }
+      ]
+    },
+    {
+      id: 'rest_water_drops',
+      condition: { rvLevel:2 },
+      text: '雨停了，车窗上全是水珠。\n你看着水珠一颗颗滑下来，外面的世界歪歪扭扭的。\n看了好久。',
+      effects: [{ type:'mood', value:1 }]
+    },
+    {
+      id: 'rest_old_receipt',
+      condition: { minDay:7 },
+      text: '整理储物格的时候，翻出了一张旧收据。\n是上个路过的小镇超市的，日期是——你来到这条路上的第一天。\n已经过了这么久了。',
+      effects: [{ type:'mood', value:0.5 }]
+    },
+    {
+      id: 'rest_fireworks',
+      condition: { time:3 },
+      text: '远处黑黑的天上，突然炸开一朵烟花。\n红的，金色的，慢慢碎成满天的星星。\n然后又一朵。\n你站在车门口，仰着头看。',
+      effects: [{ type:'mood', value:2 }]
+    },
+    {
+      id: 'rest_midnight_hunger',
+      text: '凌晨两点，你突然特别想吃东西。\n不是饿，就是……想吃。',
+      choices: [
+        { text:'找零食', effects:[{ type:'hunger', value:10 }, { type:'mood', value:1 }] },
+        { text:'忍着', effects:[{ type:'mood', value:-0.5 }] },
+        { text:'煮碗面（需厨房）', condition:{ rvLevel:2 }, effects:[{ type:'hunger', value:30 }, { type:'mood', value:3 }] }
+      ]
+    },
+    {
+      id: 'rest_cooking_smell',
+      text: '不知道哪里飘来一股炒菜的香味。\n蒜和辣椒在油里爆过的那种。\n你咽了口口水。',
+      choices: [
+        { text:'去找找', effects:[{ type:'hunger', value:25 }, { type:'mood', value:2 }], text:'遇到隔壁露营的旅人，对方分了一碗菜给你。' },
+        { text:'算了', effects:[{ type:'mood', value:-0.5 }] }
+      ]
+    },
+    {
+      id: 'rest_dream_home',
+      text: '你做了一个梦。\n梦到家里的厨房，灶上炖着汤，窗户开着，风把窗帘吹起来。\n你妈叫你吃饭。\n醒来的时候，车里很安静。',
+      effects: [{ type:'mood', value:0.5 }]
+    }
+  ],
+  
+  // 天气关联事件
+  weather: [
+    {
+      id: 'weather_leak',
+      condition: { weather:'storm', rvLevelMax:2 },
+      text: '"滴答。"\n一滴水落在你额头上。\n抬头一看——车顶接缝处在渗水。',
+      choices: [
+        { text:'拿盆接着', effects:[{ type:'mood', value:-0.5 }] },
+        { text:'上车顶补一下', condition:{ item:'防水胶' }, effects:[{ type:'mood', value:1 }], text:'你用胶带把漏洞补上了。' },
+        { text:'不管它', effects:[] }
+      ]
+    },
+    {
+      id: 'weather_sun_blanket',
+      condition: { weather:'sunny' },
+      text: '难得的大晴天。\n你把被子搭在车外，晒了整整一下午。\n晚上收进来的时候，被子上全是太阳的味道。',
+      effects: [{ type:'mood', value:1.5 }, { type:'warmth', value:10 }]
+    },
+    {
+      id: 'weather_fog',
+      condition: { weather:'fog' },
+      text: '雾从山谷里漫上来，很快什么都看不见了。\n车窗外白茫茫的，像被棉花包住了。',
+      choices: [
+        { text:'仔细看看', effects:[], random:[{ chance:0.8, effects:[], text:'看花了眼，什么都没有。' }, { chance:0.2, effects:[{ type:'mood', value:1 }], text:'你发现了一个隐藏的小路！' }] },
+        { text:'等雾散', effects:[{ type:'time', value:2 }] }
+      ]
+    },
+    {
+      id: 'weather_first_snow',
+      condition: { weather:'snow', firstSnow:true },
+      text: '今年的第一场雪。\n雪花很大，落在车顶上就化了。\n你伸手出去接了一片，冰凉的。',
+      effects: [{ type:'mood', value:2 }]
+    },
+    {
+      id: 'weather_storm_night',
+      condition: { weather:'storm', time:3 },
+      text: '风把车吹得晃了一下。\n外面在吼，像什么巨大的东西在拍打车厢。\n你抱紧了被子。',
+      choices: [
+        { text:'开收音机壮胆', condition:{ item:'车载收音机' }, effects:[{ type:'mood', value:1 }] },
+        { text:'闭眼装睡', effects:[{ type:'energy', value:-10 }] },
+        { text:'趴窗户看', effects:[{ type:'mood', value:-1 }], random:[{ chance:0.05, effects:[{ type:'money', value:-100 }], text:'树枝砸到车上了！' }] }
+      ]
+    }
+  ],
+  
+  // 懒人专属事件（原地停留时触发）
+  idle: [
+    {
+      id: 'idle_cloud_gaze',
+      text: '没什么事做。\n你坐在车里，看着窗外的云慢慢飘。\n一朵像兔子，一朵像山。\n你不知道看了多久。',
+      effects: [{ type:'mood', value:1 }]
+    },
+    {
+      id: 'idle_flower',
+      text: '下车伸个懒腰的时候，发现车轮旁长了一朵小野花。\n不知道什么时候冒出来的。\n白的，很小，但很倔强。',
+      effects: [{ type:'mood', value:1 }]
+    },
+    {
+      id: 'idle_ants',
+      text: '车底下有一队蚂蚁在搬家。\n你蹲下来看了一会儿。\n它们搬得很认真，虽然不知道在搬什么。',
+      effects: [{ type:'mood', value:0.5 }]
+    },
+    {
+      id: 'idle_radio_song',
+      condition: { item:'车载收音机' },
+      text: '收音机里突然传来一首很老的歌。\n你不知道是什么，但旋律很好听。\n信号很弱，断断续续的，一会儿就没了。\n但那几句够了。',
+      effects: [{ type:'mood', value:1 }]
+    },
+    {
+      id: 'idle_singing',
+      text: '不知道为什么，突然想唱歌。\n没什么观众，就唱了。\n跑调了也没关系。',
+      effects: [{ type:'mood', value:2 }]
+    }
+  ],
+  
+  // 麻烦事件
+  trouble: [
+    {
+      id: 'trouble_battery',
+      text: '打火，没反应。\n再打——"嗒嗒嗒"，打不着。\n电瓶亏电了。',
+      choices: [
+        { text:'找人搭电', effects:[{ type:'money', value:-100 }] },
+        { text:'推车打火', effects:[{ type:'energy', value:-30 }] },
+        { text:'等救援', effects:[{ type:'time', value:4 }] }
+      ]
+    },
+    {
+      id: 'trouble_water_leak',
+      text: '你发现车底下有一滩水。\n水箱漏了。',
+      choices: [
+        { text:'用胶带缠一下', condition:{ item:'防水胶' }, effects:[], text:'临时修好了，但还在慢慢漏。' },
+        { text:'找修车铺', effects:[{ type:'money', value:-300 }] },
+        { text:'省着点用', effects:[] }
+      ]
+    },
+    {
+      id: 'trouble_bug',
+      text: '一只飞蛾在车里扑腾。\n找不到出口，撞来撞去的。',
+      choices: [
+        { text:'打开车门让它飞走', effects:[{ type:'warmth', value:-5 }, { type:'mood', value:0.5 }] },
+        { text:'不管它', effects:[{ type:'mood', value:-0.5 }] },
+        { text:'拍死', effects:[{ type:'mood', value:-1 }] }
+      ]
+    },
+    {
+      id: 'trouble_keys_locked',
+      text: '你关上车门，然后发现——\n钥匙在里面。',
+      choices: [
+        { text:'砸小窗', effects:[{ type:'money', value:-500 }] },
+        { text:'找开锁师傅', effects:[{ type:'money', value:-200 }] },
+        { text:'等路过的人帮忙', effects:[{ type:'time', value:3 }] }
+      ]
+    }
+  ]
+};
+
+// 通用事件已触发记录
+let triggeredGeneralEvents = {};
+
+function triggerGeneralEvent(category, probability = 0.25){
+  const events = GENERAL_EVENTS[category];
+  if(!events || events.length === 0) return false;
+  
+  // 概率检查
+  if(Math.random() > probability) return false;
+  
+  // 过滤符合条件且未触发的事件
+  const available = events.filter(e => {
+    if(e.id && triggeredGeneralEvents[e.id]) return false;
+    if(!checkEventCondition(e.condition)) return false;
+    return true;
+  });
+  
+  if(available.length === 0) return false;
+  
+  // 随机选一个事件触发
+  const event = available[Math.floor(Math.random() * available.length)];
+  if(event.id) triggeredGeneralEvents[event.id] = true;
+  
+  showEventModal(event);
+  return true;
+}
+
+// ==================== CORE FUNCTIONS ====================
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+
+function advanceTime(steps=1){
+  for(let i=0;i<steps;i++){
+    G.time++;
+    if(G.time>=5){ G.time=0; G.day++; newDay(); }
+  }
+  // Daily drain
+  G.stats.hunger = clamp(G.stats.hunger - 3*steps, 0, 100);
+  G.stats.warmth = clamp(G.stats.warmth + (WEATHERS[G.weather].warmthMod*steps), 0, 100);
+  G.stats.energy = clamp(G.stats.energy - 2*steps, 0, 100);
+  // Mood from weather
+  G.stats.mood = clamp(G.stats.mood + WEATHERS[G.weather].moodMod*0.5*steps, 0, 100);
+  // 随机触发麻烦事件（5%概率）
+  if(Math.random() < 0.05){
+    triggerGeneralEvent('trouble', 1.0); // 已经过概率筛选了
+  }
+  // Mood from decorations
+  let decoMood = 0;
+  for(let s in G.rvSlots){ if(G.rvSlots[s].item){ let it=ALL_ITEMS[G.rvSlots[s].item]; if(it&&it.type==='deco') decoMood+=it.moodEffect; } }
+  for(let w of G.wallSlots){ let it=ALL_ITEMS[w]; if(it&&it.moodEffect) decoMood+=it.moodEffect; }
+  G.stats.mood = clamp(G.stats.mood + decoMood*0.3*steps, 0, 100);
+  // Water consumption (per step = 1/5 day)
+  let rvData = RV_LEVELS[G.rvLevel];
+  let waterUsePerStep = (rvData.waterUse || 2) / 5;
+  G.water = clamp(G.water - waterUsePerStep * steps, 0, G.maxWater);
+  if(G.water < 5) addEvent('水箱快见底了，得找地方加水。','warning');
+  if(G.water <= 0) G.stats.mood = clamp(G.stats.mood - 1*steps, 0, 100); // 没水心情下降
+
+  // Hunger affects mood
+  if(G.stats.hunger < 20) G.stats.mood = clamp(G.stats.mood - 1*steps, 0, 100);
+  // Low mood desc
+  if(G.stats.mood < 15) addEvent('你盯着天花板发呆，什么都不想做。','bad');
+  if(G.stats.hunger < 10) addEvent('胃在抽筋，你饿得手在抖。','warning');
+}
+
+function newDay(){
+  // 记录之前是否下雨（用于事件条件）
+  G.wasRaining = (G.weather === 'light_rain' || G.weather === 'heavy_rain' || G.weather === 'storm');
+  
+  // Random weather
+  let w = WEATHER_KEYS[Math.floor(Math.random()*WEATHER_KEYS.length)];
+  G.weather = w;
+  addEvent(`—— 第${G.day}天 ——`,'system');
+  addEvent(WEATHERS[w].desc, 'atmosphere');
+  // 天气变化时触发通用事件（20%概率）
+  triggerGeneralEvent('weather', 0.2);
+  // Random narration
+  let narrs = NARRATIONS[G.weather] || NARRATIONS.cloudy;
+  if(Math.random()<0.6) addEvent(narrs[Math.floor(Math.random()*narrs.length)],'atmosphere');
+  // Random event
+  if(Math.random()<0.35){
+    let ev = RANDOM_EVENTS[Math.floor(Math.random()*RANDOM_EVENTS.length)];
+    addEvent(ev.text,'discovery');
+    G.stats.mood = clamp(G.stats.mood + ev.mood, 0, 100);
+  }
+  G.explored = false;
+
+  // Solar charging
+  if(G.hasSolar && G.maxBattery > 0){
+    let chargeRate = WEATHERS[G.weather].solarCharge || 0;
+    // T1/T2 小型太阳能板：晴天充10kWh/天，多云5kWh，雾3kWh
+    // T3+ 自带模块：按容量比例充，晴天满充/天
+    let chargeAmount;
+    if(G.rvLevel <= 2){
+      // 小型板：固定充电量 × 天气系数
+      const BASE_CHARGE = 10; // 晴天基准10kWh/天
+      chargeAmount = Math.floor(BASE_CHARGE * chargeRate);
+    } else {
+      // T3+：按电池容量比例充电，晴天=满充
+      chargeAmount = Math.floor(G.maxBattery * chargeRate);
+    }
+    if(chargeAmount > 0){
+      G.battery = clamp(G.battery + chargeAmount, 0, G.maxBattery);
+      addEvent(`☀️ 太阳能充电${chargeAmount}kWh（${G.battery}/${G.maxBattery}kWh）。`,'good');
+    }
+  }
+}
+
+function addEvent(text, cls=''){
+  const log = document.getElementById('event-log');
+  if(!log) return;
+  try {
+    const div = document.createElement('div');
+    div.className = 'event-entry ' + cls;
+    div.textContent = text;
+    log.appendChild(div);
+    log.parentElement.scrollTop = log.parentElement.scrollHeight;
+  } catch(e){ console.error('addEvent error:', e); }
+}
+
+function getLocation(){
+  return LOCATIONS.find(l=>l.name===G.location);
+}
+
+function storageUsed(){ return G.storage.length; }
+function storageFree(){ return G.maxStorage - G.storage.length; }
+
+function addItem(name){
+  if(storageFree()<=0){ console.log('addItem FAILED (full):', name); return false; }
+  G.storage.push(name);
+  console.log('addItem:', name, 'storage now:', G.storage.length, '/', G.maxStorage);
+  return true;
+}
+
+function removeItem(name){
+  let idx = G.storage.indexOf(name);
+  if(idx>=0){ G.storage.splice(idx,1); console.log('removeItem:', name, 'new length:', G.storage.length); return true; }
+  console.log('removeItem FAILED:', name, 'storage:', JSON.stringify(G.storage));
+  return false;
+}
+
+// ==================== 事件系统 ====================
+let currentEvent = null;
+
+function showEventModal(eventData, onComplete){
+  currentEvent = { data: eventData, onComplete };
+  const modal = document.getElementById('event-modal');
+  const textEl = document.getElementById('event-modal-text');
+  const choicesEl = document.getElementById('event-modal-choices');
+  
+  textEl.textContent = eventData.text;
+  choicesEl.innerHTML = '';
+  
+  if(eventData.choices && eventData.choices.length > 0){
+    eventData.choices.forEach((choice, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'event-modal-btn' + (idx === 0 ? ' primary' : '');
+      btn.textContent = choice.text;
+      
+      // 检查选择条件
+      let canChoose = true;
+      if(choice.condition){
+        if(choice.condition.money && G.money < choice.condition.money) canChoose = false;
+        if(choice.condition.item && !G.storage.includes(choice.condition.item)) canChoose = false;
+        if(choice.condition.energy && G.stats.energy < choice.condition.energy) canChoose = false;
+      }
+      btn.disabled = !canChoose;
+      
+      btn.onclick = () => handleEventChoice(choice);
+      choicesEl.appendChild(btn);
+    });
+  } else {
+    const btn = document.createElement('button');
+    btn.className = 'event-modal-btn primary';
+    btn.textContent = '继续';
+    btn.onclick = () => {
+      if(eventData.effects) applyEffects(eventData.effects);
+      closeEventModal();
+    };
+    choicesEl.appendChild(btn);
+  }
+  
+  modal.classList.remove('hidden');
+}
+
+function handleEventChoice(choice){
+  // 应用基础效果
+  if(choice.effects) applyEffects(choice.effects);
+  
+  // 处理随机效果
+  if(choice.random){
+    const roll = Math.random();
+    let cumChance = 0;
+    for(const r of choice.random){
+      cumChance += r.chance;
+      if(roll < cumChance){
+        if(r.text) addEvent(r.text, 'discovery');
+        if(r.effects) applyEffects(r.effects);
+        break;
+      }
+    }
+  }
+  
+  closeEventModal();
+}
+
+function applyEffects(effects){
+  if(!effects) return;
+  for(const e of effects){
+    switch(e.type){
+      case 'item':
+        const count = e.count || 1;
+        for(let i=0; i<count; i++) addItem(e.item);
+        addEvent(`获得：${e.item}${count>1?'×'+count:''}`, 'good');
+        break;
+      case 'mood':
+        G.stats.mood = clamp(G.stats.mood + e.value, 0, 100);
+        break;
+      case 'hunger':
+        G.stats.hunger = clamp(G.stats.hunger + e.value, 0, 100);
+        break;
+      case 'energy':
+        G.stats.energy = clamp(G.stats.energy + e.value, 0, 100);
+        break;
+      case 'warmth':
+        G.stats.warmth = clamp(G.stats.warmth + e.value, 0, 100);
+        break;
+      case 'money':
+        G.money += e.value;
+        if(e.value < 0) addEvent(`花费 ¥${-e.value}`, 'system');
+        else addEvent(`获得 ¥${e.value}`, 'good');
+        break;
+      case 'time':
+        advanceTime(e.value);
+        break;
+      case 'water':
+        G.water = clamp(G.water + e.value, 0, G.maxWater);
+        break;
+    }
+  }
+  render();
+}
+
+function closeEventModal(){
+  document.getElementById('event-modal').classList.add('hidden');
+  if(currentEvent && currentEvent.onComplete){
+    currentEvent.onComplete();
+  }
+  currentEvent = null;
+}
+
+function checkEventCondition(condition){
+  if(!condition) return true;
+  
+  // 检查时间条件
+  if(condition.time !== undefined && G.time !== condition.time) return false;
+  
+  // 检查天气条件
+  if(condition.weather && G.weather !== condition.weather) return false;
+  
+  // 检查能量条件
+  if(condition.energy && G.stats.energy < condition.energy) return false;
+  
+  // 检查下雨后条件
+  if(condition.afterRain && !G.wasRaining) return false;
+  
+  // 检查首次访问条件
+  if(condition.firstVisit && triggeredLocationEvents[G.location + '_visited']) return false;
+  
+  // 检查房车等级下限（rvLevel:2 = T2以上才触发）
+  if(condition.rvLevel && G.rvLevel < condition.rvLevel) return false;
+  
+  // 检查房车等级上限（rvLevelMax:2 = T2及以下才触发）
+  if(condition.rvLevelMax && G.rvLevel > condition.rvLevelMax) return false;
+  
+  // 检查最低天数
+  if(condition.minDay && G.day < condition.minDay) return false;
+  
+  // 检查是否拥有物品
+  if(condition.item && !G.storage.includes(condition.item)) return false;
+  
+  return true;
+}
+
+function triggerLocationEvent(location, triggerType = 'explore'){
+  const events = LOCATION_EVENTS[location];
+  if(!events || events.length === 0) return false;
+  
+  // 过滤符合条件且未触发的事件
+  const available = events.filter(e => {
+    if(triggeredLocationEvents[e.id]) return false;
+    if(e.trigger && e.trigger !== triggerType) return false;
+    if(!checkEventCondition(e.condition)) return false;
+    return true;
+  });
+  
+  if(available.length === 0) return false;
+  
+  // 随机选一个事件触发
+  const event = available[Math.floor(Math.random() * available.length)];
+  triggeredLocationEvents[event.id] = true;
+  
+  // 标记地点已访问
+  triggeredLocationEvents[location + '_visited'] = true;
+  
+  showEventModal(event);
+  return true;
+}
+
+// ==================== ACTIONS ====================
+function actExplore(){
+  if(G.explored){ addEvent('今天已经出去过了，天色不早了。','system'); return; }
+  if(G.stats.energy < 15){ addEvent('你太累了，连站起来的力气都没有。','bad'); return; }
+  if(G.weather==='heavy_rain'||G.weather==='storm'){ addEvent('外面的雨太大了，出去太危险。','warning'); return; }
+
+  G.explored = true;
+  G.stats.energy = clamp(G.stats.energy - 20, 0, 100);
+  advanceTime(1);
+
+  let loc = getLocation();
+  let loot = EXPLORE_LOOT[G.location] || ['旧报纸'];
+  let wMod = WEATHERS[G.weather].exploreMod;
+
+  addEvent('你推开车门，走了出去。','atmosphere');
+  // 探索后触发懒人专属事件（10%概率）
+  triggerGeneralEvent('idle', 0.1);
+
+  setTimeout(()=>{
+    // Find 1-3 items
+    let found = [];
+    let count = Math.random()<0.3 ? 1 : (Math.random()<0.6 ? 2 : 3);
+    if(wMod < 1) count = Math.max(1, count-1);
+    for(let i=0;i<count;i++){
+      let item = loot[Math.floor(Math.random()*loot.length)];
+      if(storageFree()>0){
+        addItem(item);
+        found.push(item);
+      }
+    }
+
+    if(found.length>0){
+      let desc = found.map(n=>ALL_ITEMS[n].icon+n).join('、');
+      addEvent(`你找到了：${desc}`,'discovery');
+    } else {
+      addEvent('背包满了，什么都拿不了。','warning');
+    }
+
+    // Explore narration
+    let exploreTexts = [
+      '你沿着路走了一段，四周很安静。',
+      '脚下的路泥泞，但你看到了一些有用的东西。',
+      '风吹过来，带着泥土和草的味道。',
+      '你翻了翻周围的废墟，收获不多，但也不算白来。'
+    ];
+    addEvent(exploreTexts[Math.floor(Math.random()*exploreTexts.length)],'atmosphere');
+    
+    // 触发地点专属事件（30%概率）
+    if(Math.random() < 0.3){
+      triggerLocationEvent(G.location, 'explore');
+    }
+    
+    render();
+  }, 600);
+}
+
+function actRest(){
+  addEvent('你躺下来，闭上眼睛。','atmosphere');
+  advanceTime(2);
+  G.stats.energy = clamp(G.stats.energy + 30, 0, 100);
+  G.stats.hunger = clamp(G.stats.hunger - 5, 0, 100);
+  // 休息时触发通用事件（30%概率）
+  triggerGeneralEvent('rest', 0.3);
+  // Rain rest bonus
+  if(G.weather==='light_rain'){
+    addEvent('雨声伴着你入睡，比任何时候都安稳。','good');
+    G.stats.mood = clamp(G.stats.mood + 2, 0, 100);
+  }
+  render();
+}
+
+function actCook(){
+  try {
+    // 检查是否有厨房
+    let hasKitchen = G.rvSlots.kitchen && G.rvSlots.kitchen.item && G.rvLevel >= 2;
+
+    // 速食（随时可吃）
+    let instantFoods = G.storage.filter(n=>ALL_ITEMS[n]&&ALL_ITEMS[n].instant);
+    // 需烹饪的食材
+    let ingredients = G.storage.filter(n=>ALL_ITEMS[n]&&ALL_ITEMS[n].type==='ingredient');
+    console.log('actCook: hasKitchen='+hasKitchen, 'instantFoods='+instantFoods.length, 'ingredients='+ingredients.length);
+
+    if(hasKitchen){
+      if(ingredients.length>0){
+        let name = ingredients[0];
+        let it = ALL_ITEMS[name];
+        removeItem(name);
+        G.stats.hunger = clamp(G.stats.hunger + 50, 0, 100);
+        G.stats.mood = clamp(G.stats.mood + 3, 0, 100);
+        advanceTime(1);
+        addEvent(`你在厨房里做了一顿热乎乎的饭。${it.icon}${name}变成了美味的一餐。`,'good');
+        addEvent('热饭热菜，这才是活着的感觉。','good');
+        render();
+        return;
+      }
+      if(instantFoods.length>0){
+        let name = instantFoods[0];
+        let it = ALL_ITEMS[name];
+        removeItem(name);
+        G.stats.hunger = clamp(G.stats.hunger + (it.effect.hunger||0) + 10, 0, 100);
+        G.stats.mood = clamp(G.stats.mood + 1, 0, 100);
+        advanceTime(0.5);
+        addEvent(`你把${it.icon}${name}加热了一下。热乎乎的，比干吃好多了。`,'good');
+        render();
+        return;
+      }
+      addEvent('储物里没有可以做的食物了。','warning');
+    } else {
+      if(instantFoods.length>0){
+        let name = instantFoods[0];
+        let it = ALL_ITEMS[name];
+        removeItem(name);
+        G.stats.hunger = clamp(G.stats.hunger + (it.effect.hunger||0), 0, 100);
+        G.stats.mood = clamp(G.stats.mood + (it.moodEffect||0), 0, 100);
+        advanceTime(0);
+        if(it.moodEffect >= 0){
+          addEvent(`你吃了${it.icon}${name}。勉强填饱了肚子。`,'system');
+        } else {
+          addEvent(`你干嚼了${it.icon}${name}。又冷又硬，但至少不会饿死了。`,'system');
+          addEvent('没厨房的日子真难熬。什么时候能吃上一顿热饭...','atmosphere');
+        }
+        render();
+        return;
+      }
+      addEvent('储物里没有速食了，也没有厨房做饭。','warning');
+      addEvent('你得去商店买点能直接吃的东西。','system');
+    }
+    render();
+  } catch(e){
+    console.error('actCook error:', e);
+    addEvent('出了点问题，请刷新页面重试。','warning');
+    render();
+  }
+}
+
+function actDrink(){
+  try {
+    let drinks = G.storage.filter(n=>ALL_ITEMS[n]&&ALL_ITEMS[n].type==='drink');
+    console.log('actDrink: drinks='+drinks.length);
+    if(drinks.length>0){
+      let name = drinks[0];
+      let item = ALL_ITEMS[name];
+      removeItem(name);
+      G.stats.hunger = clamp(G.stats.hunger + (item.effect.hunger||0), 0, 100);
+      G.stats.energy = clamp(G.stats.energy + (item.effect.energy||0), 0, 100);
+      G.stats.mood = clamp(G.stats.mood + (item.moodEffect||0), 0, 100);
+      addEvent(`你喝了${item.icon}${name}。`,'system');
+      render();
+      return;
+    }
+    // No drink items — use water tank
+    if(G.water < 1){ addEvent('水箱空了，一滴水都倒不出来。','warning'); render(); return; }
+    G.water = clamp(G.water - 1, 0, G.maxWater);
+    G.stats.hunger = clamp(G.stats.hunger + 5, 0, 100);
+    addEvent('你从水箱接了杯水喝。凉凉的，没什么味道。','system');
+    render();
+  } catch(e){
+    console.error('actDrink error:', e);
+    addEvent('出了点问题，请刷新页面重试。','warning');
+    render();
+  }
+}
+
+function actListenRadio(){
+  if(!G.rvSlots.driver.item || G.rvSlots.driver.item==='破旧驾驶座'){
+    addEvent('收音机坏了，只能收到滋滋的杂音。','warning');
+    return;
+  }
+  advanceTime(1);
+  let msgs = [
+    '收音机里传来天气预报：明天可能转晴。',
+    '一段老歌，旋律模糊不清，但你忍不住跟着哼了两句。',
+    '"……7号公路……注意……" 信号断了。',
+    '收音机里只有白噪音，什么都没有。',
+    '有人在广播里读诗。声音很远，像是从另一个世界传来的。',
+    '"前方路段施工，建议绕行。" 至少路还通着。'
+  ];
+  addEvent(msgs[Math.floor(Math.random()*msgs.length)],'discovery');
+  G.stats.mood = clamp(G.stats.mood + 1, 0, 100);
+  render();
+}
+
+// Store pending drive info for mode selection
+let pendingDrive = null;
+
+function actDrive(){
+  let others = LOCATIONS.filter(l=>l.name!==G.location);
+  if(others.length===0) return;
+  if(G.stats.energy < 10){ addEvent('太累了，握方向盘的手都在抖。','bad'); return; }
+
+  let dest = others[Math.floor(Math.random()*others.length)];
+  let dist = Math.floor(Math.random()*20)+10;
+  let fuelCost = Math.ceil(dist*0.1); // 设计文档：10L/100km = 1L/10km
+  let elecCost = Math.ceil(dist*0.2); // 设计文档：10kWh/50km = 2kWh/10km
+
+  let canFuel = G.fuel >= fuelCost;
+  let canElec = G.hasSolar && G.maxBattery > 0 && G.battery >= elecCost;
+
+  pendingDrive = { dest, dist, fuelCost, elecCost };
+
+  if(canFuel && canElec){
+    showDriveModeModal(dest.name, dist, fuelCost, elecCost);
+  } else if(canFuel){
+    doDrive('fuel');
+  } else if(canElec){
+    doDrive('electric');
+  } else {
+    let reason = '';
+    if(G.hasSolar && G.maxBattery > 0){
+      reason = `油不够(${G.fuel}L)，电也不够(${G.battery}kWh)。去${dest.name}需要${fuelCost}L油或${elecCost}kWh电。`;
+    } else {
+      reason = `油不够了。去${dest.name}至少需要${fuelCost}L油。`;
+    }
+    addEvent(reason,'warning');
+  }
+}
+
+function doDrive(mode){
+  if(!pendingDrive) return;
+  let { dest, dist, fuelCost, elecCost } = pendingDrive;
+  pendingDrive = null;
+  closeItemModal();
+
+  if(mode==='fuel'){
+    if(G.fuel < fuelCost){ addEvent('油不够了。','warning'); return; }
+    G.fuel -= fuelCost;
+    addEvent(`你用汽油驾驶，消耗了${fuelCost}L油。`,'system');
+  } else {
+    if(G.battery < elecCost){ addEvent('电量不够了。','warning'); return; }
+    G.battery -= elecCost;
+    addEvent(`你用电驾驶，消耗了${elecCost}kWh电。`,'system');
+  }
+
+  G.location = dest.name;
+  advanceTime(2);
+  G.stats.energy = clamp(G.stats.energy - 15, 0, 100);
+  G.explored = false;
+
+  addEvent(`你发动了引擎。`,'system');
+  // 驾驶途中触发通用事件（40%概率）
+  let droveEvent = false;
+  if(Math.random() < 0.4){
+    droveEvent = triggerGeneralEvent('drive', 1.0); // 已经过概率筛选了
+  }
+  setTimeout(()=>{
+    addEvent(`—— 抵达${dest.name} ——`,'system');
+    addEvent(dest.desc,'atmosphere');
+    if(dest.fuel) addEvent('这里有加油站。','good');
+    if(dest.hasShop) addEvent(`这里有一家${dest.hasShop}。`,'discovery');
+    
+    // 到达新地点时触发地点专属事件（25%概率）
+    if(Math.random() < 0.25){
+      triggerLocationEvent(dest.name, 'arrive');
+    }
+    
+    render();
+  }, 500);
+  render();
+}
+
+function showDriveModeModal(destName, dist, fuelCost, elecCost){
+  const modal = document.getElementById('item-modal');
+  document.getElementById('item-title').textContent = '选择驾驶模式';
+  let html = `<p style="color:#777;margin-bottom:6px">前往 ${destName}（约${dist}km）</p>`;
+  html += `<button class="action-btn primary" style="width:100%;margin:4px 0" onclick="doDrive('fuel')">⛽ 用油驾驶 — 消耗${fuelCost}L（剩余${G.fuel}L）</button>`;
+  html += `<button class="action-btn" style="width:100%;margin:4px 0" onclick="doDrive('electric')">🔋 用电驾驶 — 消耗${elecCost}kWh（剩余${G.battery}kWh）</button>`;
+  document.getElementById('item-detail').innerHTML = html;
+  modal.classList.add('active');
+}
+
+function actRefuel(){
+  if(!getLocation().fuel){ addEvent('这里没有加油站。','warning'); return; }
+  let need = G.maxFuel - G.fuel;
+  if(need<=0){ addEvent('油箱是满的。','system'); return; }
+  let cost = need * 8;
+  if(G.money < cost){ cost = G.money; need = Math.floor(cost/8); }
+  if(need<=0){ addEvent('没钱加油。','warning'); return; }
+  G.money -= need*8;
+  G.fuel += need;
+  addEvent(`你加了${need}L油，花了¥${need*8}。`,'system');
+  render();
+}
+
+function installSolar(name){
+  if(G.hasSolar){ addEvent('车顶已经有太阳能板了。','system'); return; }
+  removeItem(name);
+  G.hasSolar = true;
+  G.maxBattery = 20;
+  G.battery = 0;
+  addEvent('你把太阳能板装在了车顶上。阳光好的时候就能充电了。','good');
+  addEvent('电池容量20kWh。有了它，不用完全依赖汽油了。','system');
+  render();
+}
+
+function actRefillWater(){
+  let loc = getLocation();
+  if(!loc.water && loc.water !== 'river'){ addEvent('这里没有水源。','warning'); return; }
+  if(G.water >= G.maxWater){ addEvent('水箱已经满了。','system'); return; }
+
+  let added = G.maxWater - G.water;
+  G.water = G.maxWater;
+
+  if(loc.water === 'river'){
+    addEvent(`你走到溪边，打了${added}L水。回去得烧开了才能喝。`,'good');
+    addEvent('溪水冰凉，在桶里晃荡，映着天空。','atmosphere');
+  } else {
+    addEvent(`你在水龙头接满了水箱（+${added}L）。`,'good');
+    addEvent('水是免费的。在路上，这是最踏实的感觉之一。','atmosphere');
+  }
+  render();
+}
+
+function actShop(){
+  let loc = getLocation();
+  if(!loc.hasShop){ addEvent('这里没有商店。','warning'); return; }
+  openShop(loc.hasShop, loc.shopItems);
+}
+
+function actLookWindow(){
+  advanceTime(0);
+  let texts = [];
+  if(G.weather==='light_rain') texts=['你看着雨顺着玻璃往下淌，像一条条透明的虫子。','窗外的树在雨里轻轻摇晃，像在跳舞。'];
+  else if(G.weather==='heavy_rain') texts=['雨太大，什么都看不清。只有水，到处都是水。'];
+  else if(G.weather==='sunny') texts=['阳光很好。远处的山在蓝天下清清楚楚。','天很蓝，蓝得有点不真实。'];
+  else if(G.weather==='snow') texts=['雪盖住了所有的路。世界变得很安静。'];
+  else if(G.weather==='fog') texts=['雾气贴着车窗，像有人在外面呵气。'];
+  else texts=['窗外是熟悉的荒原。路一直延伸到看不见的地方。'];
+  addEvent(texts[Math.floor(Math.random()*texts.length)],'atmosphere');
+  G.stats.mood = clamp(G.stats.mood + 0.5, 0, 100);
+  render();
+}
+
+function actWork(){
+  if(G.explored){ addEvent('今天已经出去过了，没精力打工。','system'); return; }
+  if(G.stats.energy < 25){ addEvent('太累了，干不动活。','bad'); return; }
+  if(G.weather==='heavy_rain'){ addEvent('暴雨天没人招工。','warning'); return; }
+  
+  G.explored = true;
+  G.stats.energy = clamp(G.stats.energy - 25, 0, 100);
+  advanceTime(1);
+  
+  let jobs = [
+    { name:'帮便利店搬货', pay:80, desc:'你帮店老板搬了半天货，腰酸背痛。' },
+    { name:'给加油站洗车', pay:120, desc:'高压水枪冲了一下午，手都泡皱了。' },
+    { name:'在路边摆摊', pay:60, desc:'你把储物里多余的东西摆出来卖，来买的人不多。' },
+    { name:'帮人送件到下个镇', pay:150, desc:'一个老先生托你把包裹送到前面的小镇。' },
+    { name:'修路工临时工', pay:100, desc:'搬了一上午沙袋，汗透了两层衣服。' }
+  ];
+  
+  let job = jobs[Math.floor(Math.random()*jobs.length)];
+  // Random bonus
+  let bonus = Math.random() < 0.2 ? Math.floor(job.pay * 0.5) : 0;
+  let total = job.pay + bonus;
+  
+  G.money += total;
+  addEvent(job.desc,'atmosphere');
+  if(bonus > 0){
+    addEvent(`老板多给了¥${bonus}，说是辛苦钱。`,'good');
+  }
+  addEvent(`你赚了¥${total}。`,'good');
+  render();
+}
+
+// ==================== SAVE/LOAD ====================
+const SAVE_KEY = 'lushang_save';
+const SAVE_VERSION = 2; // bump on breaking changes
+
+function saveGame(){
+  const saveData = {
+    version: SAVE_VERSION,
+    day: G.day,
+    time: G.time,
+    weather: G.weather,
+    location: G.location,
+    stats: {...G.stats},
+    money: G.money,
+    fuel: G.fuel,
+    water: G.water,
+    maxWater: G.maxWater,
+    battery: G.battery,
+    maxBattery: G.maxBattery,
+    hasSolar: G.hasSolar,
+    storage: [...G.storage],
+    wallSlots: [...G.wallSlots],
+    rvSlots: {},
+    rvLevel: G.rvLevel,
+    maxStorage: G.maxStorage,
+    maxWall: G.maxWall,
+    explored: G.explored,
+    triggeredEvents: {...triggeredLocationEvents},
+    triggeredGeneralEvents: {...triggeredGeneralEvents}
+  };
+  for(let s in G.rvSlots){
+    saveData.rvSlots[s] = {...G.rvSlots[s]};
+  }
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+    addEvent('✓ 游戏已保存。','system');
+    return true;
+  } catch(e){
+    addEvent('保存失败。','warning');
+    return false;
+  }
+}
+
+function loadGame(){
+  const data = localStorage.getItem(SAVE_KEY);
+  if(!data){ addEvent('没有找到存档。','warning'); return false; }
+  try {
+    const saveData = JSON.parse(data);
+    // Clear incompatible old saves
+    if(!saveData.version || saveData.version < SAVE_VERSION){
+      localStorage.removeItem(SAVE_KEY);
+      addEvent('检测到旧版本存档，已自动清除。开始新游戏。','system');
+      return false;
+    }
+    G.day = saveData.day;
+    G.time = saveData.time;
+    G.weather = saveData.weather;
+    G.location = saveData.location;
+    G.stats = saveData.stats;
+    G.money = saveData.money;
+    G.fuel = saveData.fuel;
+    G.water = saveData.water !== undefined ? saveData.water : RV_LEVELS[G.rvLevel||1].waterCapacity;
+    G.maxWater = saveData.maxWater || RV_LEVELS[G.rvLevel||1].waterCapacity;
+    G.battery = saveData.battery || 0;
+    G.maxBattery = saveData.maxBattery || 0;
+    G.hasSolar = saveData.hasSolar || false;
+    G.storage = saveData.storage || [];
+    G.wallSlots = saveData.wallSlots || [];
+    G.rvLevel = saveData.rvLevel || 1;
+    G.maxStorage = saveData.maxStorage || RV_LEVELS[G.rvLevel].maxStorage;
+    G.maxWall = saveData.maxWall || RV_LEVELS[G.rvLevel].maxWall;
+    G.explored = saveData.explored || false;
+    triggeredLocationEvents = saveData.triggeredEvents || {};
+    triggeredGeneralEvents = saveData.triggeredGeneralEvents || {};
+    for(let s in saveData.rvSlots){
+      G.rvSlots[s] = saveData.rvSlots[s];
+    }
+    document.getElementById('event-log').innerHTML = '';
+    addEvent('✓ 存档已读取。','system');
+    addEvent(`第${G.day}天，你在${G.location}醒来。`,'atmosphere');
+    return true;
+  } catch(e){
+    addEvent('存档损坏。','warning');
+    return false;
+  }
+}
+
+function hasSave(){
+  return localStorage.getItem(SAVE_KEY) !== null;
+}
+
+function newGame(){
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+}
+
+// ==================== UPGRADE ====================
+function canUpgrade(){
+  let nextLevel = G.rvLevel + 1;
+  if(!RV_LEVELS[nextLevel]) return { can: false, reason: '已达最高级别' };
+  let cost = RV_LEVELS[nextLevel].upgradeCost;
+  if(G.money < cost) return { can: false, reason: `需要 ¥${cost}` };
+  return { can: true, cost: cost, nextLevel: nextLevel };
+}
+
+function doUpgrade(){
+  const check = canUpgrade();
+  if(!check.can){ addEvent(check.reason,'warning'); return; }
+  
+  const next = check.nextLevel;
+  const nextData = RV_LEVELS[next];
+  
+  // 扣钱
+  G.money -= check.cost;
+  
+  // 升级
+  G.rvLevel = next;
+  G.maxStorage = nextData.maxStorage;
+  G.maxWall = nextData.maxWall;
+  G.maxWater = nextData.waterCapacity;
+  G.water = nextData.waterCapacity; // 搬家水箱加满
+  if(nextData.hasSolar && !G.hasSolar){
+    G.hasSolar = true;
+    G.maxBattery = nextData.batteryCapacity;
+    G.battery = Math.floor(nextData.batteryCapacity * 0.3); // 搬入时有一些余电
+    addEvent(`这辆${nextData.name}自带了太阳能板！电池容量${nextData.batteryCapacity}kWh。`,'good');
+  }
+  if(nextData.hasSolar && G.hasSolar && G.maxBattery < nextData.batteryCapacity){
+    G.maxBattery = nextData.batteryCapacity; // 升级电池容量
+  }
+  
+  // 搬家事件
+  addEvent('','system');
+  addEvent(`—— 搬入${nextData.name} ——`,'system');
+  addEvent(nextData.desc,'atmosphere');
+  
+  if(next === 2){
+    addEvent('第一次有了窗户。雨打在玻璃上，你终于能"看雨"了。','good');
+    G.rvSlots.driver.item = '车载收音机';
+    // 解锁厨房，放置便携炉灶
+    G.rvSlots.kitchen.item = '便携炉灶';
+    addEvent('你把便携炉灶放在了崭新的厨房区。今晚可以做顿热饭了。','good');
+  }
+  if(next === 3){
+    addEvent('热水淋浴！站在喷头下，你差点哭了。','good');
+    G.rvSlots.bath.item = '简易淋浴';
+  }
+  if(next === 4){
+    addEvent('车厢宽敞了，可以养个宠物了。','good');
+  }
+  if(next === 5){
+    addEvent('路上的人也会来坐坐了。','good');
+  }
+  
+  addEvent('新车厢空荡荡的，但已经不一样了。','atmosphere');
+  
+  saveGame();
+  render();
+}
+
+function showUpgradeModal(){
+  const modal = document.getElementById('item-modal');
+  const current = RV_LEVELS[G.rvLevel];
+  const check = canUpgrade();
+  
+  let html = `<p style="color:#888;margin-bottom:8px">当前：${current.icon} ${current.name}</p>`;
+  html += `<p style="color:#999;font-size:12px;margin-bottom:12px">储物${G.maxStorage}格 | 墙面${G.maxWall}位</p>`;
+  
+  if(check.can){
+    const next = RV_LEVELS[check.nextLevel];
+    html += `<p style="color:#666;margin-bottom:8px">升级到：${next.icon} ${next.name}</p>`;
+    html += `<p style="color:#999;font-size:12px;margin-bottom:12px">储物${next.maxStorage}格 | 墙面${next.maxWall}位</p>`;
+    html += `<button class="action-btn primary" style="width:100%" onclick="doUpgrade();closeItemModal()">确认升级 (¥${check.cost})</button>`;
+  } else {
+    html += `<p style="color:#b57070;margin-bottom:8px">${check.reason}</p>`;
+  }
+  
+  document.getElementById('item-title').textContent = '房车升级';
+  document.getElementById('item-detail').innerHTML = html;
+  modal.classList.add('active');
+}
+
+// ==================== SHOP ====================
+function openShop(shopName, items){
+  const modal = document.getElementById('shop-modal');
+  document.getElementById('shop-title').textContent = shopName;
+  const list = document.getElementById('shop-list');
+  list.innerHTML = '';
+  items.forEach(name=>{
+    let it = ALL_ITEMS[name];
+    if(!it) return;
+    let li = document.createElement('li');
+    li.className = 'item-entry';
+    li.innerHTML = `<span class="item-name">${it.icon} ${name} — ${it.desc.slice(0,15)}…</span>
+      <span><span class="item-price">¥${it.price}</span>
+      <button class="buy-btn" data-name="${name}">买</button></span>`;
+    list.appendChild(li);
+  });
+  list.querySelectorAll('.buy-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      let name = btn.dataset.name;
+      let it = ALL_ITEMS[name];
+      console.log('shop buy click:', name, 'money:', G.money, 'price:', it?it.price:'?', 'storageFree:', storageFree());
+      if(G.money < it.price){ addEvent('钱不够。','warning'); return; }
+      if(it.type==='solar'){
+        G.money -= it.price;
+        G.hasSolar = true;
+        G.maxBattery = 20;
+        G.battery = 0;
+        addEvent(`你把${it.icon}${name}装在了车顶上。现在可以用太阳能充电了！`,'good');
+        addEvent('电池容量20kWh。等天晴就能充电了。','system');
+        render();
+        btn.disabled = G.money < it.price;
+        return;
+      }
+      if(storageFree()<=0 && !it.wall){ addEvent('储物柜满了，放不下。','warning'); return; }
+      if(it.wall && G.wallSlots.length>=G.maxWall){ addEvent('墙面位置满了。','warning'); return; }
+      G.money -= it.price;
+      if(it.wall){ G.wallSlots.push(name); }
+      else { addItem(name); }
+      addEvent(`你买下了${it.icon}${name}。`,'good');
+      render();
+      // Update shop display
+      btn.disabled = G.money < it.price;
+    });
+  });
+  modal.classList.add('active');
+}
+
+// ==================== RV SLOT CLICK ====================
+function clickSlot(slotKey){
+  let slot = G.rvSlots[slotKey];
+  if(slot.item){
+    let it = ALL_ITEMS[slot.item];
+    showItemDetail(slot.item, slotKey);
+  } else {
+    // Show storage items that can be placed
+    let placeable = G.storage.filter(n=>{
+      let it = ALL_ITEMS[n];
+      return it && (it.type==='deco' || it.type==='tool');
+    });
+    if(placeable.length===0){ addEvent('储物里没有可以放置的物品。','system'); return; }
+    showPlaceDialog(slotKey, placeable);
+  }
+}
+
+function showItemDetail(name, slotKey){
+  let it = ALL_ITEMS[name];
+  const modal = document.getElementById('item-modal');
+  document.getElementById('item-title').textContent = it.icon + ' ' + name;
+  let html = `<p style="color:#999;margin:8px 0">${it.desc}</p>`;
+  html += `<p style="color:#777;font-size:12px">类型：${it.type} | 心情效果：${it.moodEffect>0?'+':''}${it.moodEffect||0}</p>`;
+  if(slotKey){
+    html += `<button class="action-btn" style="margin-top:10px" onclick="removeSlotItem('${slotKey}');closeItemModal()">收回储物</button>`;
+  }
+  if(it.type==='food'||it.type==='drink'){
+    html += `<button class="action-btn primary" style="margin-top:6px" onclick="useItem('${name}');closeItemModal()">使用</button>`;
+  }
+  if(it.type==='solar'){
+    html += `<button class="action-btn primary" style="margin-top:6px" onclick="installSolar('${name}');closeItemModal()">安装到车顶</button>`;
+  }
+  document.getElementById('item-detail').innerHTML = html;
+  modal.classList.add('active');
+}
+
+function showPlaceDialog(slotKey, items){
+  const modal = document.getElementById('item-modal');
+  document.getElementById('item-title').textContent = '放置物品';
+  let html = '<p style="color:#777;margin-bottom:8px">选择一件物品放到这里：</p>';
+  items.forEach(name=>{
+    let it = ALL_ITEMS[name];
+    html += `<button class="action-btn" style="margin:3px" onclick="placeItem('${slotKey}','${name}');closeItemModal()">${it.icon} ${name}</button>`;
+  });
+  document.getElementById('item-detail').innerHTML = html;
+  modal.classList.add('active');
+}
+
+function placeItem(slotKey, name){
+  G.rvSlots[slotKey].item = name;
+  removeItem(name);
+  let it = ALL_ITEMS[name];
+  addEvent(`你把${it.icon}${name}放在了${G.rvSlots[slotKey].name}。`,'good');
+  render();
+}
+
+function removeSlotItem(slotKey){
+  if(storageFree()<=0){ addEvent('储物柜满了，收不回来。','warning'); return; }
+  let name = G.rvSlots[slotKey].item;
+  if(!name) return;
+  addItem(name);
+  G.rvSlots[slotKey].item = null;
+  addEvent(`你把${ALL_ITEMS[name].icon}${name}收回了储物。`,'system');
+  render();
+}
+
+function useItem(name){
+  let it = ALL_ITEMS[name];
+  // Find and remove from storage or slot
+  let inStorage = G.storage.includes(name);
+  let slotKey = null;
+  for(let s in G.rvSlots){ if(G.rvSlots[s].item===name) slotKey=s; }
+  if(inStorage) removeItem(name);
+  else if(slotKey){ G.rvSlots[slotKey].item=null; }
+  else return;
+  if(it.effect.hunger) G.stats.hunger = clamp(G.stats.hunger + it.effect.hunger, 0, 100);
+  if(it.effect.energy) G.stats.energy = clamp(G.stats.energy + it.effect.energy, 0, 100);
+  if(it.moodEffect) G.stats.mood = clamp(G.stats.mood + it.moodEffect, 0, 100);
+  addEvent(`你使用了${it.icon}${name}。`,'system');
+  render();
+}
+
+function closeItemModal(){
+  document.getElementById('item-modal').classList.remove('active');
+}
+
+function clickStorageItem(name){
+  showItemDetail(name, null);
+}
+
+// ==================== RENDER ====================
+function render(){
+  // Header
+  document.getElementById('header-info').textContent = `第 ${G.day} 天 · ${G.timeNames[G.time]} · ${G.location}`;
+
+  // Stats
+  ['hunger','warmth','energy','mood'].forEach(s=>{
+    document.getElementById('bar-'+s).style.width = G.stats[s]+'%';
+    document.getElementById('val-'+s).textContent = Math.round(G.stats[s]);
+  });
+  document.getElementById('val-money').textContent = '¥'+G.money;
+  document.getElementById('val-fuel').textContent = G.fuel+'L';
+  document.getElementById('val-water').textContent = Math.round(G.water)+'/'+G.maxWater+'L';
+  // Battery display
+  let batteryRow = document.getElementById('battery-row');
+  if(batteryRow){
+    if(G.hasSolar && G.maxBattery > 0){
+      batteryRow.style.display = 'flex';
+      document.getElementById('bar-battery').style.width = (G.battery/G.maxBattery*100)+'%';
+      document.getElementById('val-battery').textContent = Math.round(G.battery)+'/'+G.maxBattery+'kWh';
+    } else {
+      batteryRow.style.display = 'none';
+    }
+  }
+  document.getElementById('val-location').textContent = G.location;
+
+  // Weather
+  let w = WEATHERS[G.weather];
+  document.getElementById('weather-icon').textContent = w.icon;
+  document.getElementById('weather-name').textContent = w.name;
+  document.getElementById('weather-desc').textContent = w.desc;
+
+  // RV Layout - only show unlocked slots
+  let rvHtml = '';
+  for(let s in G.rvSlots){
+    let slot = G.rvSlots[s];
+    if(slot.unlockLevel > G.rvLevel) continue; // locked slot
+    let itemDisplay = slot.item ? (ALL_ITEMS[slot.item]?ALL_ITEMS[slot.item].icon:'?') : '·';
+    let label = slot.item || '空';
+    rvHtml += `<div class="rv-slot" onclick="clickSlot('${s}')">
+      <div class="slot-name">${slot.name}</div>
+      <div class="slot-item">${itemDisplay}</div>
+      <div class="slot-label">${label}</div>
+    </div>`;
+  }
+  // Level hint: show unlockable slots as plain text, not as fake slot buttons
+  let nextLevel = G.rvLevel + 1;
+  if(RV_LEVELS[nextLevel]){
+    let nextSlots = Object.keys(G.rvSlots).filter(s=>G.rvSlots[s].unlockLevel===nextLevel);
+    let nextNames = nextSlots.map(s=>G.rvSlots[s].name).join('、');
+    rvHtml += `<div style="text-align:center;color:#bbb;font-size:10px;margin-top:6px;width:100%">🔒 升级到${RV_LEVELS[nextLevel].name}解锁：${nextNames}（¥${RV_LEVELS[nextLevel].upgradeCost}）</div>`;
+  }
+  document.getElementById('rv-layout').innerHTML = rvHtml;
+
+  // Storage Grid
+  let stHtml = '';
+  let total = G.maxStorage;
+  try {
+    for(let i=0;i<total;i++){
+      if(i<G.storage.length){
+        let name = G.storage[i];
+        let it = ALL_ITEMS[name];
+        if(!it){ console.warn('Missing ALL_ITEMS entry for:', name); }
+        stHtml += `<div class="storage-cell" onclick="clickStorageItem('${name}')">
+          ${it?it.icon:'?'}<span class="cell-tip">${name}</span></div>`;
+      } else {
+        stHtml += `<div class="storage-cell empty">·</div>`;
+      }
+    }
+  } catch(e){ console.error('Storage render error:', e); }
+  document.getElementById('storage-grid').innerHTML = stHtml;
+  document.getElementById('storage-count').textContent = `(${G.storage.length}/${G.maxStorage})`;
+  console.log('render storage:', G.storage.length, '/', G.maxStorage, JSON.stringify(G.storage));
+
+  // Actions
+  let loc = getLocation();
+  let canExplore = !G.explored && G.stats.energy>=15 && G.weather!=='heavy_rain';
+  let hasKitchen = G.rvSlots.kitchen && G.rvSlots.kitchen.item && G.rvLevel >= 2;
+  let canCook = hasKitchen && G.storage.some(n=>ALL_ITEMS[n]&&(ALL_ITEMS[n].type==='ingredient'||ALL_ITEMS[n].instant));
+  let canEat = G.storage.some(n=>ALL_ITEMS[n]&&ALL_ITEMS[n].instant);
+  let canDrink = true; // Always can try (will fall back to water tank)
+  let canRest = G.stats.energy < 90;
+  let canDrive = (G.fuel > 0 || (G.hasSolar && G.maxBattery > 0 && G.battery > 0)) && G.stats.energy >= 10;
+  let canRefuel = loc && loc.fuel && G.fuel < G.maxFuel && G.money > 0;
+  let canWater = loc && (loc.water || loc.water === 'river') && G.water < G.maxWater;
+  let canShop = loc && loc.hasShop;
+  let upgradeCheck = canUpgrade();
+
+  // RV level display
+  let rvLevelHtml = `<div style="text-align:center;margin-bottom:8px;color:#999;font-size:11px">${RV_LEVELS[G.rvLevel].icon} ${RV_LEVELS[G.rvLevel].name}</div>`;
+  let solarStatusHtml = '';
+  if(G.hasSolar && G.maxBattery > 0){
+    let chargeRate = WEATHERS[G.weather].solarCharge || 0;
+    if(chargeRate > 0){
+      solarStatusHtml = `<div style="font-size:10px;color:#66bb6a;margin-top:2px">☀️ 正在充电</div>`;
+    } else {
+      solarStatusHtml = `<div style="font-size:10px;color:#999;margin-top:2px">🌧️ 无法充电</div>`;
+    }
+  }
+  document.getElementById('weather-box').innerHTML = rvLevelHtml + `
+    <div class="weather-icon">${WEATHERS[G.weather].icon}</div>
+    <div class="weather-name">${WEATHERS[G.weather].name}</div>
+    <div class="weather-desc">${WEATHERS[G.weather].desc}</div>` + solarStatusHtml;
+
+  let actHtml = '';
+  // 第一行：核心行动
+  actHtml += `<button class="action-btn primary" onclick="actExplore()" ${canExplore?'':'disabled'}>外出探索</button>`;
+  actHtml += `<button class="action-btn" onclick="actCook()" ${hasKitchen?(canCook?'':'disabled'):(canEat?'':'disabled')}>${hasKitchen?'做饭':'吃速食'}</button>`;
+  let drinkLabel = '喝点什么';
+  let hasDrinkItems = G.storage.some(n=>ALL_ITEMS[n]&&ALL_ITEMS[n].type==='drink');
+  if(!hasDrinkItems) drinkLabel = G.water > 0 ? '喝水' : '没水喝';
+  actHtml += `<button class="action-btn" onclick="actDrink()" ${(hasDrinkItems||G.water>0)?'':'disabled'}>${drinkLabel}</button>`;
+  actHtml += `<button class="action-btn" onclick="actRest()" ${canRest?'':'disabled'}>休息</button>`;
+  actHtml += `<button class="action-btn" onclick="actLookWindow()">看窗外</button>`;
+  actHtml += `<button class="action-btn" onclick="actWork()" ${!G.explored&&G.stats.energy>=25&&G.weather!=='heavy_rain'?'':'disabled'}>打工赚钱</button>`;
+  actHtml += `<br style="clear:both"><div style="height:6px"></div>`;
+  // 第二行：移动和商店
+  actHtml += `<button class="action-btn" onclick="actDrive()" ${canDrive?'':'disabled'}>驾车离开</button>`;
+  if(canRefuel) actHtml += `<button class="action-btn" onclick="actRefuel()">加油</button>`;
+  if(canWater) actHtml += `<button class="action-btn primary" onclick="actRefillWater()">加水</button>`;
+  if(canShop) actHtml += `<button class="action-btn" onclick="actShop()">逛${loc.hasShop}</button>`;
+  actHtml += `<button class="action-btn" onclick="actListenRadio()">听收音机</button>`;
+  actHtml += `<br style="clear:both"><div style="height:6px"></div>`;
+  // 第三行：升级和存档
+  actHtml += `<button class="action-btn ${upgradeCheck.can?'primary':''}" onclick="showUpgradeModal()">升级房车${upgradeCheck.can?' (¥'+upgradeCheck.cost+')':''}</button>`;
+  actHtml += `<button class="action-btn" onclick="saveGame()">存档</button>`;
+  actHtml += `<button class="action-btn" onclick="loadGame()">读档</button>`;
+  actHtml += `<button class="action-btn danger" onclick="if(confirm('确定重新开始？'))newGame()">新游戏</button>`;
+  
+  document.getElementById('actions').innerHTML = actHtml;
+}
+
+// ==================== INIT ====================
+document.getElementById('shop-close').addEventListener('click',()=>{
+  document.getElementById('shop-modal').classList.remove('active');
+  render(); // refresh UI after shop closes
+});
+document.getElementById('item-close').addEventListener('click', closeItemModal);
+
+// Close modals on overlay click
+['shop-modal','item-modal'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',(e)=>{
+    if(e.target.classList.contains('modal-overlay')){
+      e.target.classList.remove('active');
+      render(); // refresh UI after closing by overlay
+    }
+  });
+});
+
+// Start game - try load save first
+if(hasSave()){
+  if(loadGame()){
+    render();
+  } else {
+    startNewGame();
+  }
+} else {
+  startNewGame();
+}
+
+function startNewGame(){
+  // Full state reset to T1 defaults
+  let rvData = RV_LEVELS[1];
+  G.day = 1;
+  G.time = 0;
+  G.weather = 'light_rain';
+  G.location = '鹿角湾';
+  G.stats = { hunger: 70, warmth: 65, energy: 80, mood: 50 };
+  G.money = 500;
+  G.fuel = 40;
+  G.water = rvData.waterCapacity;
+  G.maxWater = rvData.waterCapacity;
+  G.battery = 0;
+  G.maxBattery = 0;
+  G.hasSolar = false;
+  // Hide battery bar on new game
+  let batteryRow = document.getElementById('battery-row');
+  if(batteryRow) batteryRow.style.display = 'none';
+  G.storage = [];
+  G.maxStorage = rvData.maxStorage;
+  G.wallSlots = [];
+  G.maxWall = rvData.maxWall;
+  G.rvSlots = {
+    driver: { name:'驾驶区', icon:'🚐', item:null, unlockLevel:1 },
+    living: { name:'起居区', icon:'🏠', item:null, unlockLevel:2 },
+    bed:    { name:'睡眠区', icon:'🛏️', item:'薄床垫', unlockLevel:1 },
+    kitchen:{ name:'厨房区', icon:'🍳', item:null, unlockLevel:2 },
+    bath:   { name:'卫浴区', icon:'🚿', item:null, unlockLevel:3 },
+    storage:{ name:'储物区', icon:'📦', item:null, unlockLevel:1 },
+    work:   { name:'工作台', icon:'🔧', item:null, unlockLevel:4 },
+    balcony:{ name:'阳台', icon:'🌅', item:null, unlockLevel:4 },
+    lounge: { name:'客厅', icon:'🛋️', item:null, unlockLevel:5 },
+    secret: { name:'暗格', icon:'🔒', item:null, unlockLevel:5 }
+  };
+  G.rvLevel = 1;
+  G.explored = false;
+  addEvent('外面下着小雨。','atmosphere');
+  addEvent('雨点打在车顶上，密密麻麻的，像谁在用指尖敲着一面铁鼓。','atmosphere');
+  addEvent('','system');
+  addEvent('你缩在面包车的后座，薄床垫又硬又凉。','atmosphere');
+  addEvent('灶台旁边堆着最后几包方便面。','atmosphere');
+  addEvent('窗外的世界模糊成一片灰色，但车厢里，灯还亮着。','atmosphere');
+  addEvent('','system');
+  addEvent('这是你上路的第一天。路还很长。','system');
+  addEvent('','system');
+
+  // Starting items
+  addItem('方便面');
+  addItem('方便面');
+  addItem('矿泉水');
+  addItem('矿泉水');
+  addItem('蜡烛');
+  addItem('打火机');
+
+  render();
+  saveGame();
+}
+
+// Auto-save every 60 seconds
+setInterval(()=>{ saveGame(); }, 60000);
+</script>
+
+<!-- 事件模态框 -->
+<div class="event-modal hidden" id="event-modal">
+  <div class="event-modal-content">
+    <div class="event-modal-text" id="event-modal-text"></div>
+    <div class="event-modal-choices" id="event-modal-choices"></div>
+  </div>
+</div>
+
+</body>
+</html>
