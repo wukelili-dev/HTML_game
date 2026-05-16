@@ -2330,6 +2330,7 @@ function render(){
   if(canWater) actHtml += `<button class="action-btn primary" onclick="actRefillWater()">加水</button>`;
   if(canShop) actHtml += `<button class="action-btn" onclick="actShop()">逛${loc.hasShop}</button>`;
   actHtml += `<button class="action-btn" onclick="actListenRadio()">听收音机</button>`;
+  if(!G.driving) actHtml += `<button class="action-btn" onclick="openModPanel()">🔧 改装</button>`;
   actHtml += `<br style="clear:both"><div style="height:6px"></div>`;
   // 第三行：升级和存档
   actHtml += `<button class="action-btn ${upgradeCheck.can?'primary':''}" onclick="showUpgradeModal()">升级房车${upgradeCheck.can?' (¥'+upgradeCheck.cost+')':''}</button>`;
