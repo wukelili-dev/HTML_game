@@ -234,7 +234,20 @@ const G = {
   rvLevel: 1, // T1
   explored: false,
   driving: false,
-  shopVisited: false
+  shopVisited: false,
+  // 车辆改装系统
+  carType: 'van', // 当前车型: van/small_rv/medium_rv/large_rv
+  mods: {
+    engine: 0,      // 动力系统
+    electric: 0,    // 电力系统
+    water: 0,       // 水路系统
+    kitchen: 0,     // 厨房设施
+    bath: 0,        // 卫浴设施
+    insulation: 0,  // 保温隔音
+    roof: 0,        // 车顶加装
+    cabin: 0        // 车厢结构
+  },
+  carChanges: 0 // 换车次数
 };
 
 // ==================== RV LEVELS ====================
@@ -244,6 +257,98 @@ const RV_LEVELS = {
   3: { name: '中型房车', icon: '🚎', maxStorage: 22, maxWall: 4, upgradeCost: 20000, waterCapacity: 80, waterUse: 3, batteryCapacity: 40, hasSolar: true, desc: '有了卫浴，生活品质提升一大截。' },
   4: { name: '大型房车', icon: '🏠', maxStorage: 30, maxWall: 6, upgradeCost: 50000, waterCapacity: 120, waterUse: 3, batteryCapacity: 80, hasSolar: true, desc: '可以养宠物了，车厢里有了呼吸。' },
   5: { name: '豪华房车', icon: '🏰', maxStorage: 40, maxWall: 8, upgradeCost: 100000, waterCapacity: 200, waterUse: 4, batteryCapacity: 150, hasSolar: true, desc: '路上的家，可以请人来做客。' }
+};
+
+// ==================== CAR TYPES ====================
+const CAR_TYPES = {
+  van:       { name:'面包车', icon:'🚐', price:3000,  baseSlots:2, maxCabinMod:1, maxStorage:8,  maxWall:0 },
+  small_rv:  { name:'小型房车', icon:'🚛', price:8000,  baseSlots:3, maxCabinMod:2, maxStorage:14, maxWall:2 },
+  medium_rv: { name:'中型房车', icon:'🚎', price:18000, baseSlots:4, maxCabinMod:3, maxStorage:22, maxWall:4 },
+  large_rv:  { name:'大型房车', icon:'🏠', price:35000, baseSlots:5, maxCabinMod:4, maxStorage:30, maxWall:6 }
+};
+
+// ==================== MODIFICATIONS ====================
+const MODIFICATIONS = {
+  // 动力系统（独立系统）
+  engine: {
+    name: '动力系统', icon: '🔧',
+    levels: {
+      0: { name:'原厂引擎', effect:'油耗1.0x', desc:'原装引擎，够用但费油。' },
+      1: { name:'省油调校', effect:'油耗0.85x', cost:800, materials:['扳手'], location:'加油站', requires:{}, portable:true, desc:'ECU调校、喷油嘴优化，省油15%。' },
+      2: { name:'扩容油箱', effect:'续航+50%', cost:1500, materials:['铁皮'], location:'枯木镇', requires:{}, portable:false, desc:'加装80-120L副油箱，跑得更远。' },
+      3: { name:'混动改装', effect:'可用电辅助', cost:5000, materials:['太阳能板'], location:'高原驿站', requires:{}, portable:false, desc:'P1混动改装，动能回收，油电双驱。' }
+    }
+  },
+  // 电力系统（核心储能）
+  electric: {
+    name: '电力系统', icon: '🔋',
+    levels: {
+      0: { name:'无独立电源', effect:'靠引擎发电', desc:'只能行车时用电，停下来就断电。' },
+      1: { name:'基础电池组', effect:'20kWh', cost:1200, materials:['电线'], location:'加油站', requires:{}, portable:true, desc:'磷酸铁锂12V/200Ah，基本的电力自由。' },
+      2: { name:'太阳能系统', effect:'白天充电+8/h', cost:3000, materials:['太阳能板'], location:'高原驿站', requires:{}, portable:false, desc:'400W板+双电瓶隔离器，白天持续充电。' },
+      3: { name:'完整电力', effect:'80kWh，220V输出', cost:8000, materials:['太阳能板','太阳能板','电线','电线','电线'], location:'高原驿站', requires:{}, portable:false, desc:'800W太阳能+3000W逆变器，真正的电力自由。' }
+    }
+  },
+  // 水路系统
+  water: {
+    name: '水路系统', icon: '💧',
+    levels: {
+      0: { name:'基础水箱', effect:'20L塑料桶', desc:'手提加水，勉强够用。' },
+      1: { name:'扩容水箱', effect:'60L，有水泵', cost:800, materials:['水管'], location:'加油站', requires:{}, portable:false, desc:'304不锈钢清水箱+12V水泵，不用手提了。' },
+      2: { name:'净水系统', effect:'河水可直饮', cost:2000, materials:['水管','过滤器'], location:'枯木镇', requires:{}, portable:false, desc:'初级过滤器+活性炭，溪水也能喝。' },
+      3: { name:'完整水路', effect:'120L+热水', cost:5000, materials:['水管','水管','电线'], location:'旧码头', requires:{}, portable:false, desc:'灰水箱+热水器+水位传感器，完整水路。' }
+    }
+  },
+  // 厨房设施
+  kitchen: {
+    name: '厨房设施', icon: '🔥',
+    levels: {
+      0: { name:'无厨房', effect:'只能吃速食', desc:'没有烹饪条件，只能吃现成的。' },
+      1: { name:'便携炉灶', effect:'可烹饪食材', cost:300, materials:['打火机'], location:'便利店', requires:{}, portable:true, desc:'卡式炉，火苗跳起来就有家的味道。' },
+      2: { name:'简易厨房', effect:'烹饪+保鲜', cost:2000, materials:['木板','水管'], location:'枯木镇', requires:{electric:1}, portable:false, desc:'带盖水槽+操作台+小冰箱。' },
+      3: { name:'完整厨房', effect:'解锁大餐', cost:6000, materials:['木板','木板','铁皮','电线'], location:'旧码头', requires:{electric:2}, portable:false, desc:'电磁炉+冰箱+户外抽拉灶，大厨级别。' }
+    }
+  },
+  // 卫浴设施
+  bath: {
+    name: '卫浴设施', icon: '🚿',
+    levels: {
+      0: { name:'无卫浴', effect:'靠路边/加油站', desc:'没有卫浴，只能找公共设施。' },
+      1: { name:'便携马桶', effect:'基本需求', cost:500, materials:[], location:'便利店', requires:{}, portable:false, desc:'便携式马桶，需手动清理。' },
+      2: { name:'淋浴系统', effect:'可洗澡', cost:3000, materials:['水管','电线','防水布'], location:'枯木镇', requires:{water:1,electric:1}, portable:false, desc:'浴帘隔断+换气扇+淋浴头。' },
+      3: { name:'完整卫浴', effect:'热水淋浴', cost:8000, materials:['水管','水管','电线','防水胶'], location:'旧码头', requires:{water:3,electric:2}, portable:false, desc:'固定黑水箱+热水器+硬隔断，真正的卫浴。' }
+    }
+  },
+  // 保温隔音
+  insulation: {
+    name: '保温隔音', icon: '🧣',
+    levels: {
+      0: { name:'无保温', effect:'冬冷夏热', desc:'原车铁皮，冷得像睡在冰箱里。' },
+      1: { name:'基础保温', effect:'体温流失-30%', cost:1000, materials:['保温棉'], location:'枯木镇', requires:{}, portable:false, desc:'止震板+隔热棉，至少不那么冷了。' },
+      2: { name:'隔音保温', effect:'休息心情+1', cost:3000, materials:['保温棉','保温棉','木板'], location:'枯木镇', requires:{}, portable:false, desc:'满铺止震+吸音棉+双层窗，安静多了。' },
+      3: { name:'完整温控', effect:'四季如春', cost:8000, materials:['保温棉','保温棉','保温棉','铁皮','电线'], location:'旧码头', requires:{electric:3}, portable:false, desc:'暖风机+空调，四季舒适。' }
+    }
+  },
+  // 车顶加装
+  roof: {
+    name: '车顶加装', icon: '🏗️',
+    levels: {
+      0: { name:'空车顶', effect:'无', desc:'光秃秃的车顶，什么都没有。' },
+      1: { name:'行李架', effect:'+1挂墙位', cost:600, materials:['木板','螺丝包'], location:'加油站', requires:{}, portable:false, desc:'载重50kg行李架，多了一处挂载。' },
+      2: { name:'天窗+换气扇', effect:'看星星+通风', cost:2500, materials:['玻璃','防水胶','电线'], location:'旧码头', requires:{}, portable:false, desc:'双向换气扇，晚上能看星星。' },
+      3: { name:'太阳能顶', effect:'充电+15/h', cost:6000, materials:['太阳能板','太阳能板','电线'], location:'高原驿站', requires:{}, portable:false, desc:'800W固定板+防水处理，车顶发电站。' }
+    }
+  },
+  // 车厢结构
+  cabin: {
+    name: '车厢结构', icon: '🪵',
+    levels: {
+      0: { name:'原厂车厢', effect:'基础格位', desc:'空车厢，只有基础空间。' },
+      1: { name:'收纳优化', effect:'+1格位', cost:600, materials:['木板','螺丝包'], location:'枯木镇', requires:{}, portable:false, desc:'吊柜+床下储物，见缝插针。' },
+      2: { name:'空间扩展', effect:'+2格位', cost:2500, materials:['木板','木板','木板','保温棉'], location:'枯木镇', requires:{}, portable:false, desc:'固定床铺+橱柜系统，空间翻倍。' },
+      3: { name:'夹层暗格', effect:'+1格位(暗格)', cost:4000, materials:['铁皮','电线'], location:'枯木镇', requires:{}, portable:false, desc:'隐藏储物+防浪板，藏东西的好地方。' }
+    }
+  }
 };
 
 // ==================== DATA ====================
