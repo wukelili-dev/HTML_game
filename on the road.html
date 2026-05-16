@@ -1246,6 +1246,46 @@ function doUpgradeMod(partKey) {
   renderModPanel();
 }
 
+function checkModAchievements() {
+  // 第一个家：厨房≥1
+  if (!G.ach_firstHome && (G.mods.kitchen||0) >= 1) {
+    G.ach_firstHome = true;
+    G.stats.mood = clamp(G.stats.mood + 2, 0, 100);
+    addEvent('🏠 【成就：第一个家】有了灶台，这辆车终于像家了。心情+2', 'special');
+  }
+  // 温暖的车：保温≥2
+  if (!G.ach_warmCar && (G.mods.insulation||0) >= 2) {
+    G.ach_warmCar = true;
+    G.warmCar = true;
+    addEvent('🔥 【成就：温暖的车】双层隔音保温，外面风雨再大也不怕。休息效果+20%', 'special');
+  }
+  // 自给自足：电力≥2 且 水路≥2
+  if (!G.ach_selfSufficient && (G.mods.electric||0) >= 2 && (G.mods.water||0) >= 2) {
+    G.ach_selfSufficient = true;
+    addEvent('⚡ 【成就：自给自足】有电有水，哪里都是家。', 'special');
+  }
+  // 移动咖啡馆：厨房≥3 且 电力≥2
+  if (!G.ach_cafe && (G.mods.kitchen||0) >= 3 && (G.mods.electric||0) >= 2) {
+    G.ach_cafe = true;
+    addEvent('☕ 【成就：移动咖啡馆】厨房全配+电力充足，可以卖咖啡了。', 'special');
+  }
+  // 真正的家：8部位全≥2
+  if (!G.ach_realHome) {
+    const allLv2 = Object.keys(MODIFICATIONS).every(k => (G.mods[k]||0) >= 2);
+    if (allLv2) {
+      G.ach_realHome = true;
+      G.stats.mood = clamp(G.stats.mood + 5, 0, 100);
+      addEvent('🏡 【成就：真正的家】每个角落都精心打造，这就是家。心情+5', 'special');
+    }
+  }
+  // 老司机：换车≥3次
+  if (!G.ach_veteran && (G.carChanges||0) >= 3) {
+    G.ach_veteran = true;
+    G.carDiscount = 0.9;
+    addEvent('🚗 【成就：老司机】换了三次车，车商给你打九折。', 'special');
+  }
+}
+
 // ==================== CORE FUNCTIONS ====================
 function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
 
