@@ -286,18 +286,19 @@ const G = {
   wallSlots: [],
   maxWall: 2,
   rvSlots: {
-    driver: { name:'驾驶区', icon:'🚐', item:null, unlockLevel:1 },
-    living: { name:'起居区', icon:'🏠', item:null, unlockLevel:2 },
-    bed:    { name:'睡眠区', icon:'🛏️', item:'薄床垫', unlockLevel:1 },
-    kitchen:{ name:'厨房区', icon:'🍳', item:null, unlockLevel:2 },
-    bath:   { name:'卫浴区', icon:'🚿', item:null, unlockLevel:3 },
-    storage:{ name:'储物区', icon:'📦', item:null, unlockLevel:1 },
-    work:   { name:'工作台', icon:'🔧', item:null, unlockLevel:4 },
-    balcony:{ name:'阳台', icon:'🌅', item:null, unlockLevel:4 },
-    lounge: { name:'客厅', icon:'🛋️', item:null, unlockLevel:5 },
-    secret: { name:'暗格', icon:'🔒', item:null, unlockLevel:5 }
+    driver: { name:'驾驶区', icon:'🚐', item:null, unlockLevel:1, enabled:true },
+    living: { name:'起居区', icon:'🏠', item:null, unlockLevel:2, enabled:false },
+    bed:    { name:'睡眠区', icon:'🛏️', item:'薄床垫', unlockLevel:1, enabled:true },
+    kitchen:{ name:'厨房区', icon:'🍳', item:null, unlockLevel:2, enabled:false },
+    bath:   { name:'卫浴区', icon:'🚿', item:null, unlockLevel:3, enabled:false },
+    storage:{ name:'储物区', icon:'📦', item:null, unlockLevel:1, enabled:false },
+    work:   { name:'工作台', icon:'🔧', item:null, unlockLevel:4, enabled:false },
+    balcony:{ name:'阳台', icon:'🌅', item:null, unlockLevel:4, enabled:false },
+    lounge: { name:'客厅', icon:'🛋️', item:null, unlockLevel:5, enabled:false },
+    secret: { name:'暗格', icon:'🔒', item:null, unlockLevel:5, enabled:false }
   },
-  rvLevel: 1, // T1
+  rvLevel: 1, // T1 (保留但不用于格位解锁)
+  slotCount: 2, // 当前启用格位数，由车型+车厢改装决定
   explored: false,
   driving: false,
   shopVisited: false,
@@ -1080,7 +1081,12 @@ function canUpgradeMod(partKey) {
 
 function updateSlots() {
   const car = CAR_TYPES[G.carType];
-  G.rvSlots = car.baseSlots + Math.min((G.mods.cabin||0), car.maxCabinMod);
+  G.slotCount = car.baseSlots + Math.min((G.mods.cabin||0), car.maxCabinMod);
+  // 按unlockLevel排序，启用slotCount个功能区
+  const slotsByLevel = Object.keys(G.rvSlots).sort((a,b) => G.rvSlots[a].unlockLevel - G.rvSlots[b].unlockLevel);
+  slotsByLevel.forEach((key, i) => {
+    G.rvSlots[key].enabled = i < G.slotCount;
+  });
 }
 
 function applyModEffects(partKey) {
@@ -1204,7 +1210,7 @@ function showModNarrative(partKey, level) {
 function renderModPanel() {
   const car = CAR_TYPES[G.carType];
   document.getElementById('mod-car-info').innerHTML = 
-    `<b>${car.name}</b> | 格位: ${G.rvSlots} | 钱: ¥${G.money}`;
+    `<b>${car.name}</b> | 格位: ${G.slotCount} | 钱: ¥${G.money}`;
   
   let partsHtml = '';
   for (const [key, mod] of Object.entries(MODIFICATIONS)) {
@@ -1641,7 +1647,7 @@ function actRest(){
 function actCook(){
   try {
     // 检查是否有厨房
-    let hasKitchen = G.rvSlots.kitchen && G.rvSlots.kitchen.item && G.rvLevel >= 2;
+    let hasKitchen = G.rvSlots.kitchen && G.rvSlots.kitchen.enabled && G.rvSlots.kitchen.item;
 
     // 速食（随时可吃）
     let instantFoods = G.storage.filter(n=>ALL_ITEMS[n]&&ALL_ITEMS[n].instant);
@@ -2006,6 +2012,16 @@ function loadGame(){
     for(let s in saveData.rvSlots){
       G.rvSlots[s] = saveData.rvSlots[s];
     }
+    // 存档兼容：补全enabled和slotCount
+    if(G.slotCount === undefined) G.slotCount = 2;
+    for(let s in G.rvSlots){
+      if(G.rvSlots[s].enabled === undefined) G.rvSlots[s].enabled = false;
+    }
+    // 根据当前车型+改装重新计算enabled
+    const car = CAR_TYPES.find(c => c.key === G.carType) || CAR_TYPES[0];
+    G.slotCount = car.baseSlots + Math.min((G.mods.cabin||0), car.maxCabinMod);
+    const loadSlots = Object.keys(G.rvSlots).sort((a,b) => G.rvSlots[a].unlockLevel - G.rvSlots[b].unlockLevel);
+    loadSlots.forEach((key, i) => { G.rvSlots[key].enabled = i < G.slotCount; });
     document.getElementById('event-log').innerHTML = '';
     addEvent('✓ 存档已读取。','system');
     addEvent(`第${G.day}天，你在${G.location}醒来。`,'atmosphere');
@@ -2282,9 +2298,11 @@ function render(){
 
   // RV Layout - only show unlocked slots
   let rvHtml = '';
-  for(let s in G.rvSlots){
+  // 按unlockLevel排序显示格位
+  let sortedSlots = Object.keys(G.rvSlots).sort((a,b) => G.rvSlots[a].unlockLevel - G.rvSlots[b].unlockLevel);
+  for(let s of sortedSlots){
     let slot = G.rvSlots[s];
-    if(slot.unlockLevel > G.rvLevel) continue; // locked slot
+    if(!slot.enabled) continue; // 未启用的格位不显示
     let itemDisplay = slot.item ? (ALL_ITEMS[slot.item]?ALL_ITEMS[slot.item].icon:'?') : '·';
     let label = slot.item || '空';
     rvHtml += `<div class="rv-slot" onclick="clickSlot('${s}')">
@@ -2293,12 +2311,11 @@ function render(){
       <div class="slot-label">${label}</div>
     </div>`;
   }
-  // Level hint: show unlockable slots as plain text, not as fake slot buttons
-  let nextLevel = G.rvLevel + 1;
-  if(RV_LEVELS[nextLevel]){
-    let nextSlots = Object.keys(G.rvSlots).filter(s=>G.rvSlots[s].unlockLevel===nextLevel);
-    let nextNames = nextSlots.map(s=>G.rvSlots[s].name).join('、');
-    rvHtml += `<div style="text-align:center;color:#bbb;font-size:10px;margin-top:6px;width:100%">🔒 升级到${RV_LEVELS[nextLevel].name}解锁：${nextNames}（¥${RV_LEVELS[nextLevel].upgradeCost}）</div>`;
+  // 格位提示：显示未启用的下一个格位
+  let nextSlot = sortedSlots.find(s => !G.rvSlots[s].enabled);
+  if(nextSlot){
+    let slot = G.rvSlots[nextSlot];
+    rvHtml += `<div style="text-align:center;color:#bbb;font-size:10px;margin-top:6px;width:100%">🔒 下一个格位：${slot.name}（换车或改装车厢结构解锁）</div>`;
   }
   document.getElementById('rv-layout').innerHTML = rvHtml;
 
@@ -2325,7 +2342,7 @@ function render(){
   // Actions
   let loc = getLocation();
   let canExplore = !G.explored && G.stats.energy>=15 && G.weather!=='heavy_rain';
-  let hasKitchen = G.rvSlots.kitchen && G.rvSlots.kitchen.item && G.rvLevel >= 2;
+  let hasKitchen = G.rvSlots.kitchen && G.rvSlots.kitchen.enabled && G.rvSlots.kitchen.item;
   let canCook = hasKitchen && G.storage.some(n=>ALL_ITEMS[n]&&(ALL_ITEMS[n].type==='ingredient'||ALL_ITEMS[n].instant));
   let canEat = G.storage.some(n=>ALL_ITEMS[n]&&ALL_ITEMS[n].instant);
   let canDrink = true; // Always can try (will fall back to water tank)
@@ -2432,17 +2449,21 @@ function startNewGame(){
   G.wallSlots = [];
   G.maxWall = rvData.maxWall;
   G.rvSlots = {
-    driver: { name:'驾驶区', icon:'🚐', item:null, unlockLevel:1 },
-    living: { name:'起居区', icon:'🏠', item:null, unlockLevel:2 },
-    bed:    { name:'睡眠区', icon:'🛏️', item:'薄床垫', unlockLevel:1 },
-    kitchen:{ name:'厨房区', icon:'🍳', item:null, unlockLevel:2 },
-    bath:   { name:'卫浴区', icon:'🚿', item:null, unlockLevel:3 },
-    storage:{ name:'储物区', icon:'📦', item:null, unlockLevel:1 },
-    work:   { name:'工作台', icon:'🔧', item:null, unlockLevel:4 },
-    balcony:{ name:'阳台', icon:'🌅', item:null, unlockLevel:4 },
-    lounge: { name:'客厅', icon:'🛋️', item:null, unlockLevel:5 },
-    secret: { name:'暗格', icon:'🔒', item:null, unlockLevel:5 }
+    driver: { name:'驾驶区', icon:'🚐', item:null, unlockLevel:1, enabled:true },
+    living: { name:'起居区', icon:'🏠', item:null, unlockLevel:2, enabled:false },
+    bed:    { name:'睡眠区', icon:'🛏️', item:'薄床垫', unlockLevel:1, enabled:true },
+    kitchen:{ name:'厨房区', icon:'🍳', item:null, unlockLevel:2, enabled:false },
+    bath:   { name:'卫浴区', icon:'🚿', item:null, unlockLevel:3, enabled:false },
+    storage:{ name:'储物区', icon:'📦', item:null, unlockLevel:1, enabled:false },
+    work:   { name:'工作台', icon:'🔧', item:null, unlockLevel:4, enabled:false },
+    balcony:{ name:'阳台', icon:'🌅', item:null, unlockLevel:4, enabled:false },
+    lounge: { name:'客厅', icon:'🛋️', item:null, unlockLevel:5, enabled:false },
+    secret: { name:'暗格', icon:'🔒', item:null, unlockLevel:5, enabled:false }
   };
+  G.slotCount = 2; // 面包车baseSlots=2
+  // 按unlockLevel排序，启用slotCount个格位
+  const initSlots = Object.keys(G.rvSlots).sort((a,b) => G.rvSlots[a].unlockLevel - G.rvSlots[b].unlockLevel);
+  initSlots.forEach((key, i) => { G.rvSlots[key].enabled = i < G.slotCount; });
   G.rvLevel = 1;
   G.explored = false;
   addEvent('外面下着小雨。','atmosphere');
