@@ -363,12 +363,12 @@ const WEATHERS = {
 
 const LOCATIONS = [
   { name:'鹿角湾', hasShop:'便利店', desc:'一个小海湾，有加油站和几栋旧房子', fuel:true, water:true, shopItems:['方便面','罐头','矿泉水','压缩饼干','纸巾','蜡烛','巧克力','风景明信片'] },
-  { name:'枯木镇', hasShop:'五金店', desc:'路边的小镇，有个破旧的五金铺', fuel:false, water:true, shopItems:['扳手','防水胶','木板','铁皮','螺丝包','电线','保温棉','小型太阳能板'] },
+  { name:'枯木镇', hasShop:'五金店', desc:'路边的小镇，有个破旧的五金铺', fuel:false, water:true, shopItems:['扳手','防水胶','木板','铁皮','螺丝包','电线','保温棉','小型太阳能板','过滤器'] },
   { name:'溪谷营地', hasShop:null, desc:'山谷里的一片空地，溪水声很好听', fuel:false, water:'river', shopItems:[] },
   { name:'落石坡', hasShop:'加油站', desc:'山坡上的小加油站，孤独地亮着灯', fuel:true, water:true, shopItems:['热狗','咖啡','矿泉水','地图','打火机','墨镜'] },
   { name:'雾松林', hasShop:null, desc:'松树林里雾气弥漫，地上有松果', fuel:false, water:false, shopItems:[] },
-  { name:'旧码头', hasShop:'杂货铺', desc:'废弃的码头，还有人在这里做买卖', fuel:false, water:'river', shopItems:['鱼干','绳索','望远镜','旧小说','多肉盆栽','粗陶马克杯','LED灯串','风景海报','生鲜蔬菜','鸡蛋','大米'] },
-  { name:'高原驿站', hasShop:'户外店', desc:'高原上的休息站，风很大', fuel:true, water:true, shopItems:['冲锋衣','头灯','睡袋','登山鞋','指南针','多功能刀'] }
+  { name:'旧码头', hasShop:'杂货铺', desc:'废弃的码头，还有人在这里做买卖', fuel:false, water:'river', shopItems:['鱼干','绳索','望远镜','旧小说','多肉盆栽','粗陶马克杯','LED灯串','风景海报','生鲜蔬菜','鸡蛋','大米','水管','玻璃','防水胶','防水布'] },
+  { name:'高原驿站', hasShop:'户外店', desc:'高原上的休息站，风很大', fuel:true, water:true, shopItems:['冲锋衣','头灯','睡袋','登山鞋','指南针','多功能刀','小型太阳能板','过滤器','电线'] }
 ];
 
 const ALL_ITEMS = {
@@ -426,7 +426,12 @@ const ALL_ITEMS = {
   '自制米酒': { icon:'🍶', type:'drink', effect:{hunger:10, warmth:5}, moodEffect:2, desc:'加油站老板自己酿的酒，度数不高但很香。', price:0 },
   '旧笔记本': { icon:'📓', type:'deco', effect:{}, moodEffect:0.5, desc:'发黄的笔记本，里面写满了看不懂的字。', price:0 },
   '鱼钩':     { icon:'🪝', type:'tool', effect:{}, moodEffect:0, desc:'生锈的鱼钩，但还能用。', price:0 },
-  '氧气瓶':   { icon:'🫁', type:'tool', effect:{}, moodEffect:0, desc:'便携氧气瓶，高原上用得着。', price:150 }
+  '氧气瓶':   { icon:'🫁', type:'tool', effect:{}, moodEffect:0, desc:'便携氧气瓶，高原上用得着。', price:150 },
+  // 改装材料
+  '过滤器':   { icon:'🔲', type:'material', effect:{}, moodEffect:0, desc:'净水过滤芯，装了就能喝河水。', price:50, stack:10 },
+  '防水布':   { icon:'🧵', type:'material', effect:{}, moodEffect:0, desc:'防水材料，做淋浴隔断用。', price:15, stack:10 },
+  '玻璃':     { icon:'🪟', type:'material', effect:{}, moodEffect:0, desc:'车窗材料，装天窗必备。', price:30, stack:5 },
+  '水管':     { icon:'🚰', type:'material', effect:{}, moodEffect:0, desc:'水管配件，接水路用的。', price:20, stack:10 }
 };
 
 const WEATHER_KEYS = Object.keys(WEATHERS);
