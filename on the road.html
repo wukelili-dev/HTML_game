@@ -1200,6 +1200,52 @@ function showModNarrative(partKey, level) {
   if (text) addEvent(text, 'special');
 }
 
+// ========== 改装面板渲染 ==========
+function renderModPanel() {
+  const car = CAR_TYPES[G.carType];
+  document.getElementById('mod-car-info').innerHTML = 
+    `<b>${car.name}</b> | 格位: ${G.rvSlots} | 钱: ¥${G.money}`;
+  
+  let partsHtml = '';
+  for (const [key, mod] of Object.entries(MODIFICATIONS)) {
+    const lv = G.mods[key] || 0;
+    const check = canUpgradeMod(key);
+    const btnClass = check.can ? '' : 'disabled';
+    const btnText = lv >= mod.levels.length ? '已满' : '升级';
+    partsHtml += `<div class="mod-part">
+      <span class="mod-part-name">${mod.name}</span>
+      <span class="mod-part-level">Lv${lv}</span>
+      <button class="mod-part-btn ${btnClass}" onclick="doUpgradeMod('${key}')">${btnText}</button>
+    </div>`;
+  }
+  document.getElementById('mod-parts').innerHTML = partsHtml;
+  
+  let carHtml = '';
+  CAR_TYPES.forEach((c, i) => {
+    if (c.key === G.carType) return;
+    const price = Math.floor(c.price * (G.carDiscount || 1));
+    const canBuy = G.money >= price;
+    carHtml += `<button class="mod-change-btn ${canBuy ? '' : 'disabled'}" onclick="changeCar('${c.key}')">
+      ${c.name} (¥${price})
+    </button>`;
+  });
+  document.getElementById('mod-change-car').innerHTML = carHtml;
+}
+
+function openModPanel() {
+  document.getElementById('mod-modal').classList.add('open');
+  renderModPanel();
+}
+
+function closeModPanel() {
+  document.getElementById('mod-modal').classList.remove('open');
+}
+
+function doUpgradeMod(partKey) {
+  upgradeMod(partKey);
+  renderModPanel();
+}
+
 // ==================== CORE FUNCTIONS ====================
 function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
 
