@@ -974,6 +974,166 @@ function dismantleItem(itemName) {
   return true;
 }
 
+// ========== 改装逻辑函数 ==========
+function hasMaterials(materials) {
+  const counts = {};
+  materials.forEach(m => counts[m] = (counts[m]||0) + 1);
+  for (const [m, need] of Object.entries(counts)) {
+    const have = G.storage.filter(s => s === m).length;
+    if (have < need) return false;
+  }
+  return true;
+}
+
+function consumeMaterials(materials) {
+  materials.forEach(m => {
+    const idx = G.storage.indexOf(m);
+    if (idx !== -1) G.storage.splice(idx, 1);
+  });
+}
+
+function canUpgradeMod(partKey) {
+  const mod = MODIFICATIONS[partKey];
+  if (!mod) return { can: false, reason: '部位不存在' };
+  const curLv = G.mods[partKey] || 0;
+  if (curLv >= mod.levels.length) return { can: false, reason: '已满级' };
+  const nextLv = mod.levels[curLv];
+  if (nextLv.cost > G.money) return { can: false, reason: '钱不够（需要¥' + nextLv.cost + '）' };
+  if (nextLv.materials && !hasMaterials(nextLv.materials)) return { can: false, reason: '材料不够' };
+  if (nextLv.location) {
+    const loc = LOCATIONS[G.location];
+    if (!loc || loc.hasShop !== nextLv.location) return { can: false, reason: '需要到' + nextLv.location + '才能改装' };
+  }
+  if (nextLv.requires) {
+    for (const [reqPart, reqLv] of Object.entries(nextLv.requires)) {
+      if ((G.mods[reqPart]||0) < reqLv) return { can: false, reason: '需要' + MODIFICATIONS[reqPart].name + ' Lv' + reqLv };
+    }
+  }
+  return { can: true, nextLv: nextLv };
+}
+
+function updateSlots() {
+  const car = CAR_TYPES[G.carType];
+  G.rvSlots = car.baseSlots + Math.min((G.mods.cabin||0), car.maxCabinMod);
+}
+
+function applyModEffects(partKey) {
+  if (partKey === 'cabin' || partKey === 'roof') {
+    updateSlots();
+  }
+}
+
+function upgradeMod(partKey) {
+  const check = canUpgradeMod(partKey);
+  if (!check.can) {
+    addEvent(check.reason, 'system');
+    return false;
+  }
+  const nextLv = check.nextLv;
+  G.money -= nextLv.cost;
+  if (nextLv.materials) consumeMaterials(nextLv.materials);
+  G.mods[partKey] = (G.mods[partKey] || 0) + 1;
+  applyModEffects(partKey);
+  showModNarrative(partKey, G.mods[partKey]);
+  checkModAchievements();
+  addLog('改装：' + MODIFICATIONS[partKey].name + ' → Lv' + G.mods[partKey]);
+  render();
+  return true;
+}
+
+function changeCar(newCarType) {
+  const newCar = CAR_TYPES[newCarType];
+  const oldCar = CAR_TYPES[G.carType];
+  if (!newCar) return false;
+  const price = Math.floor(newCar.price * (G.carDiscount || 1));
+  if (G.money < price) {
+    addEvent('钱不够（需要¥' + price + '）', 'system');
+    return false;
+  }
+  G.money -= price;
+  // 便携改装保留，固定改装归零回收50%材料
+  const refund = [];
+  for (const [key, lv] of Object.entries(G.mods)) {
+    if (lv > 0) {
+      const mod = MODIFICATIONS[key];
+      if (mod.portable) continue; // 便携类保留
+      // 固定类归零，回收50%材料
+      for (let i = 0; i < lv; i++) {
+        if (mod.levels[i] && mod.levels[i].materials) {
+          mod.levels[i].materials.forEach(m => {
+            if (Math.random() < 0.5 && G.storage.length < getMaxStorage()) {
+              refund.push(m);
+            }
+          });
+        }
+      }
+      G.mods[key] = 0;
+    }
+  }
+  G.carType = newCarType;
+  G.carChanges = (G.carChanges || 0) + 1;
+  updateSlots();
+  refund.forEach(m => G.storage.push(m));
+  if (refund.length > 0) {
+    addEvent('换了' + newCar.name + '，回收了：' + refund.join('、'), 'good');
+  } else {
+    addEvent('换了' + newCar.name + '。', 'good');
+  }
+  addLog('换车：' + oldCar.name + ' → ' + newCar.name);
+  checkModAchievements();
+  render();
+  return true;
+}
+
+// ========== 改装叙事 ==========
+const MOD_NARRATIVES = {
+  power: {
+    1: '引擎盖下多了一块电池，电够用了，至少晚上不用摸黑。',
+    2: '太阳能板稳稳地趴在车顶，白天跑路，晚上用电，日子舒坦了。',
+    3: '满车都是电，冰箱、空调、音响——像个移动的发电站。'
+  },
+  cabin: {
+    1: '车厢往后扩了一截，多出来的空间刚好放张小桌。',
+    2: '车厢又宽了一圈，走动不用侧身了。',
+    3: '车厢宽敞得像个单身公寓，想怎么摆就怎么摆。'
+  },
+  kitchen: {
+    1: '角落里支起了灶台，终于不用天天啃干粮了。',
+    2: '小冰箱嗡嗡地响，灶台上有了两个炉头，像样了。',
+    3: '烤箱、微波炉、咖啡机……这厨房比很多人家里的都全。'
+  },
+  bathroom: {
+    1: '一个简易马桶蹲在角落，虽然小，但不用再找公共厕所了。',
+    2: '淋浴间隔出来了，热水哗哗地流，这才是生活。',
+    3: '干湿分离，暖风烘干——谁说房车不能精致？'
+  },
+  electric: {
+    1: '电线沿着车厢壁走了一圈，灯亮了，不再只有蜡烛。',
+    2: '插座到处都是，充电不用抢，晚上还能看个投影。',
+    3: '智能电表、USB面板、氛围灯带——全车电气化。'
+  },
+  water: {
+    1: '一根水管从车底接到了水龙头，拧开就有水。',
+    2: '净水器装好了，河水过滤一下就能喝。',
+    3: '灰水箱、净水箱分开了，水压稳得跟家里一样。'
+  },
+  insulation: {
+    1: '贴了一层保温棉，风不往骨头里钻了。',
+    2: '双层隔音，外面下雨只听见沙沙声，不再噼里啪啦。',
+    3: '冬天暖如春，夏天凉飕飕，车窗上再也没结过霜。'
+  },
+  roof: {
+    1: '车顶多了个行李架，还能绑点东西上去。',
+    2: '升顶帐篷撑起来了，睡觉多一层空间。',
+    3: '天窗开了，躺在床上能看星星。'
+  }
+};
+
+function showModNarrative(partKey, level) {
+  const text = MOD_NARRATIVES[partKey] && MOD_NARRATIVES[partKey][level];
+  if (text) addEvent(text, 'special');
+}
+
 // ==================== CORE FUNCTIONS ====================
 function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
 
