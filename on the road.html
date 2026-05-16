@@ -1408,7 +1408,19 @@ function removeItem(name){
 // ==================== 事件系统 ====================
 let currentEvent = null;
 
+let pendingEvents = []; // 排队等待显示的事件
+
 function showEventModal(eventData, onComplete){
+  // 如果 modal 正在显示，将新事件加入队列
+  const modal = document.getElementById('event-modal');
+  if(modal && !modal.classList.contains('hidden')){
+    pendingEvents.push({ data: eventData, onComplete });
+    return;
+  }
+  _doShowEventModal(eventData, onComplete);
+}
+
+function _doShowEventModal(eventData, onComplete){
   currentEvent = { data: eventData, onComplete };
   const modal = document.getElementById('event-modal');
   const textEl = document.getElementById('event-modal-text');
@@ -1513,6 +1525,11 @@ function closeEventModal(){
     currentEvent.onComplete();
   }
   currentEvent = null;
+  // 处理排队事件
+  if(pendingEvents.length > 0){
+    const next = pendingEvents.shift();
+    _doShowEventModal(next.data, next.onComplete);
+  }
 }
 
 function checkEventCondition(condition){
