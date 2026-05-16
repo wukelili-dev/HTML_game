@@ -940,6 +940,40 @@ function triggerGeneralEvent(category, probability = 0.25){
   return true;
 }
 
+function dismantleItem(itemName) {
+  const recipes = {
+    '旧报纸': ['引火材料'],
+    '漂流木': ['木板'],
+    '松果': ['燃料'],
+    '坏掉的电器': ['电线', '铁皮'],
+    '旧家具': ['木板', '木板', '螺丝包']
+  };
+  
+  if (!recipes[itemName]) {
+    addEvent('这个没法拆。', 'system');
+    return false;
+  }
+  
+  const idx = G.storage.indexOf(itemName);
+  if (idx === -1) {
+    addEvent('你没有这个。', 'system');
+    return false;
+  }
+  
+  G.storage.splice(idx, 1);
+  const given = recipes[itemName];
+  given.forEach(m => {
+    if (G.storage.length < getMaxStorage()) {
+      G.storage.push(m);
+    }
+  });
+  
+  addEvent('拆解了' + itemName + '，得到：' + given.join('、'), 'good');
+  addLog('拆解：' + itemName + ' → ' + given.join('、'));
+  render();
+  return true;
+}
+
 // ==================== CORE FUNCTIONS ====================
 function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
 
