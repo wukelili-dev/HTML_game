@@ -1,0 +1,135 @@
+    // 9个驾驶类事件（按文档1-9号完整实现）
+    
+    // 1. 搭车者（6种NPC类型）
+    {
+      id: 'drive_hitchhiker_full',
+      text: '路边站着一个人，背着大包，朝你招手。\n"师傅，能搭一段吗？去前面镇上就行。"',
+      choices: [
+        { text:'停车载他', effects:[{ type:'fuel', value:-10 }, { type:'money', value:50 }], 
+          random:[
+            { chance:0.2, effects:[{ type:'mood', value:1 }, { type:'discovery', value:'背包学生推荐了便宜落脚点' }], text:'学生跟你聊了学校的事，推荐了前方镇上的便宜旅馆。' },
+            { chance:0.2, effects:[{ type:'mood', value:2 }], text:'老伯伯讲了他年轻时在路上跑的故事，很有意思。' },
+            { chance:0.2, effects:[], text:'外卖小哥聊了大城市的压力，你默默听着。' },
+            { chance:0.15, effects:[{ type:'discovery', value:'神秘旅人留下纸条' }], text:'神秘旅人下车时留下一张纸条，上面写着疑似坐标的数字。' },
+            { chance:0.15, effects:[{ type:'mood', value:2 }, { type:'item', item:'猫' }], text:'带猫的女孩把猫留在你车上不走了，猫在你腿上蹭了蹭。' },
+            { chance:0.1, effects:[{ type:'item', item:'香烟' }, { type:'mood', value:-0.5 }], text:'哭泣的女人下车时塞给你一包烟，"谢谢你能停下来"。' }
+          ]
+        },
+        { text:'摆摆手开走', effects:[{ type:'mood', value:-0.5 }] }
+      ]
+    },
+    
+    // 2. 路边摊/小吃车（6种小吃）
+    {
+      id: 'drive_street_food_full',
+      text: '路边冒着一股香味。\n一辆三轮车上挂着灯泡，老板在翻烤串。\n"来一串？"',
+      choices: [
+        { text:'买烤红薯（¥5）', condition:{ money:5 }, effects:[{ type:'money', value:-5 }, { type:'hunger', value:20 }, { type:'warmth', value:5 }, { type:'mood', value:1 }] },
+        { text:'买煎饼果子（¥8）', condition:{ money:8 }, effects:[{ type:'money', value:-8 }, { type:'hunger', value:35 }, { type:'mood', value:1 }] },
+        { text:'买茶叶蛋（¥3）', condition:{ money:3 }, effects:[{ type:'money', value:-3 }, { type:'hunger', value:10 }, { type:'mood', value:0.5 }] },
+        { text:'买烤串×5（¥10）', condition:{ money:10 }, effects:[{ type:'money', value:-10 }, { type:'hunger', value:30 }, { type:'mood', value:1.5 }] },
+        { text:'买甜酒酿（¥6）', condition:{ money:6 }, effects:[{ type:'money', value:-6 }, { type:'hunger', value:10 }, { type:'mood', value:2 }] },
+        { text:'买桂花糕（¥5）', condition:{ money:5 }, effects:[{ type:'money', value:-5 }, { type:'hunger', value:15 }, { type:'mood', value:2 }] },
+        { text:'继续开', effects:[] }
+      ]
+    },
+    
+    // 3. 路边修车人（4种回报）
+    {
+      id: 'drive_help_mechanic_full',
+      text: '前方路边停着一辆车，引擎盖掀着。\n一个人蹲在车头前，满手油污，朝你挥了挥手。',
+      choices: [
+        { text:'停车帮忙', effects:[{ type:'energy', value:-15 }],
+          random:[
+            { chance:0.3, effects:[{ type:'fuel', value:30 }], text:'对方感激，送了你半桶油。' },
+            { chance:0.3, effects:[{ type:'money', value:50 }], text:'对方给了你50块感谢费。' },
+            { chance:0.2, effects:[{ type:'item', item:'扳手' }], text:'对方送了你一把扳手。' },
+            { chance:0.15, effects:[{ type:'discovery', value:'修车铺折扣' }], text:'"我朋友在前面镇上开修车铺，提我名打折。"' },
+            { chance:0.05, effects:[], text:'什么都没有，但握了握手，感觉还不错。' }
+          ]
+        },
+        { text:'按个喇叭开走', effects:[{ type:'mood', value:-0.5 }] }
+      ]
+    },
+    
+    // 4. 暴雨突至（3个选择）
+    {
+      id: 'drive_rain_storm_full',
+      condition: { weather:'heavy_rain' },
+      text: '天色突然暗下来，豆大的雨点砸在挡风玻璃上。\n雨刮器拼命地摆，前面什么都看不清。',
+      choices: [
+        { text:'靠边停车等雨停', effects:[{ type:'time', value:2 }], text:'你等了一会儿，雨小了。' },
+        { text:'减速慢行继续开', effects:[{ type:'fuel', value:-5 }], random:[{ chance:0.95, effects:[] }, { chance:0.05, effects:[{ type:'money', value:-200 }], text:'剐蹭到了，需要修理。' }] },
+        { text:'加速冲过去', effects:[{ type:'fuel', value:-10 }], random:[{ chance:0.8, effects:[] }, { chance:0.15, effects:[{ type:'money', value:-200 }], text:'剐蹭到了！' }, { chance:0.05, effects:[{ type:'event', value:'爆胎' }], text:'"砰！"爆胎了！' }] }
+      ]
+    },
+    
+    // 5. 美丽风景（7种风景）
+    {
+      id: 'drive_beautiful_view_full',
+      text: '转过一个弯，眼前突然开阔了。',
+      random:[
+        { chance:0.2, condition:{ weather:'sunny', time:2 }, effects:[{ type:'mood', value:2 }], text:'远处的山被夕阳染成金色，公路像一条丝带蜿蜒在山谷间。\n"山是金色的，路也是。"' },
+        { chance:0.2, condition:{ weather:'sunny' }, effects:[{ type:'mood', value:3 }], text:'雨后天晴，一道彩虹横跨天际。\n你把车停在路边，看了很久。' },
+        { chance:0.15, condition:{ weather:'fog' }, effects:[{ type:'mood', value:1 }], text:'雾中的森林，像开进了另一个世界。\n你下意识松了油门。' },
+        { chance:0.15, condition:{ time:3 }, effects:[{ type:'mood', value:2 }], text:'深夜的星空下，公路像一条通向宇宙的路。\n路很长，天更大。' },
+        { chance:0.1, condition:{ weather:'sunny' }, effects:[{ type:'mood', value:2 }], text:'海岸公路，海风灌进来，咸咸的。\n你摇下车窗，让风吹乱头发。' },
+        { chance:0.1, condition:{ weather:'snow' }, effects:[{ type:'mood', value:1 }], text:'雪原白路，全世界只剩白色和安静。\n你把车停在路边，听雪落下的声音。' },
+        { chance:0.1, condition:{ time:3, weather:'sunny' }, effects:[{ type:'mood', value:1.5 }], text:'月光下的田野，月亮大得不像话，麦浪在风里翻。\n你停下车，看了很久。' }
+      ]
+    },
+    
+    // 6. 路边告示牌（6种告示）
+    {
+      id: 'drive_sign_post_full',
+      text: '一块歪歪斜斜的告示牌立在路边：',
+      random:[
+        { chance:0.25, effects:[{ type:'discovery', value:'农家乐' }, { type:'mood', value:0.5 }], text:'"前方3公里，老周农家乐，土鸡汤，住宿50/晚"\n你记下了位置。' },
+        { chance:0.2, effects:[{ type:'discovery', value:'加油站5km' }], text:'"加油站5km →"\n你提前知道了加油站位置。' },
+        { chance:0.2, effects:[{ type:'fuel', value:-10 }], text:'"前方施工绕行"\n你绕了路，多耗了10%的油。' },
+        { chance:0.15, effects:[], text:'"此处事故多发，请小心驾驶"\n你小心地开了过去。' },
+        { chance:0.1, effects:[{ type:'discovery', value:'跳蚤市场' }], text:'"跳蚤市场 周日 前方2km"\n你记下了这个信息。' },
+        { chance:0.1, effects:[{ type:'discovery', value:'钓鱼点' }], text:'"钓鱼点 → 2km"\n你发现了一个新的钓鱼地点。' }
+      ],
+      choices:[
+        { text:'记下位置', effects:[{ type:'mood', value:0.5 }] },
+        { text:'不感兴趣', effects:[] }
+      ]
+    },
+    
+    // 7. 爆胎
+    {
+      id: 'drive_flat_tire_full',
+      text: '"砰！"\n方向盘猛地一偏，车歪了一下。\n右后轮瘪了。',
+      choices: [
+        { text:'自己换备胎', condition:{ item:'扳手' }, effects:[{ type:'energy', value:-20 }, { type:'time', value:2 }], text:'你折腾了两个小时，终于换好了。' },
+        { text:'自己换（无工具）', condition:{ not:{ item:'扳手' } }, effects:[], text:'你翻了半天，没有备胎或扳手，换不了。' },
+        { text:'打电话叫救援', condition:{ hasSignal:true }, effects:[{ type:'money', value:-300 }, { type:'time', value:2 }], text:'等了几个小时，救援来了。' },
+        { text:'叫救援（无信号）', condition:{ not:{ hasSignal:true } }, effects:[{ type:'time', value:4 }], text:'没有信号，你只能等路过的人帮忙。' }
+      ]
+    },
+    
+    // 8. 动物过路（6种动物）
+    {
+      id: 'drive_animal_cross_full',
+      text: '前方路上有动物在过马路。',
+      random:[
+        { chance:0.3, effects:[{ type:'mood', value:0.5 }, { type:'time', value:0.2 }], text:'一群鸭子摇摇晃晃地穿过公路。\n它们完全不着急。\n"不赶路也没关系。"' },
+        { chance:0.2, effects:[{ type:'mood', value:0.5 }], text:'一只野兔一闪而过，消失在路边的草丛里。' },
+        { chance:0.2, effects:[{ type:'time', value:0.5 }], text:'牛群慢慢过马路，急也没用。\n你等了五分钟。' },
+        { chance:0.15, effects:[{ type:'mood', value:1 }], text:'一只刺猬慢慢横穿公路，比你还慢。\n你停下来等它过去。' },
+        { chance:0.1, effects:[{ type:'mood', value:-0.5 }], text:'一条蛇在路上爬行。\n你小心地绕了过去。' },
+        { chance:0.05, effects:[{ type:'mood', value:1.5 }], text:'一群蝴蝶扑面而来，像春天撞进了车里。' }
+      ]
+    },
+    
+    // 9. 信号不好
+    {
+      id: 'drive_bad_signal',
+      text: '收音机开始沙沙响，信号断了。\n你调了调旋钮，收到一段模糊的广播：\n"……前方……塌方……绕行……"\n然后又断了。',
+      choices: [
+        { text:'按原路继续', effects:[], random:[{ chance:0.5, effects:[] }, { chance:0.3, effects:[{ type:'fuel', value:-15 }], text:'遇到了塌方，绕了远路。' }, { chance:0.2, effects:[{ type:'time', value:3 }], text:'前方真的塌方了，你等了几个小时才通路。' }], text:'你决定按原路继续，可能遇到塌方。' },
+        { text:'找路绕行', effects:[{ type:'fuel', value:-15 }], text:'你决定绕路，多耗了15%的油，但避开了可能的塌方。' }
+      ]
+    }
+  ],

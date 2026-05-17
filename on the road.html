@@ -1658,6 +1658,24 @@ function actRest(){
     addEvent('雨声伴着你入睡，比任何时候都安稳。','good');
     G.stats.mood = clamp(G.stats.mood + 2, 0, 100);
   }
+  // 太阳能充电（休息直接充电，晴天+2/多云+1/其他+0）
+  if(G.hasSolar && G.maxBattery > 0){
+    let charge = 0;
+    if(G.rvLevel <= 2){
+      // T1/T2：晴天+2，多云+1，其他+0（按电池单元计）
+      if(G.weather==='sunny') charge = 2;
+      else if(G.weather==='cloudy') charge = 1;
+    } else {
+      // T3+：按容量比例
+      let rate = WEATHERS[G.weather].solarCharge || 0;
+      if(G.weather==='sunny') charge = Math.floor(G.maxBattery * rate);
+      else if(G.weather==='cloudy') charge = Math.floor(G.maxBattery * rate);
+    }
+    if(charge > 0){
+      G.battery = clamp(G.battery + charge, 0, G.maxBattery);
+      addEvent(`☀️ 太阳能充电${charge}kWh（${G.battery}/${G.maxBattery}kWh）。`,'good');
+    }
+  }
   render();
 }
 
