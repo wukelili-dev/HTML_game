@@ -217,6 +217,21 @@ body{background:#fafafa;color:#333;font-family:'Noto Serif SC',serif;font-size:1
   cursor: pointer;
   color: #999;
 }
+.mod-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  padding: 6px 16px;
+  background: #ecf0f1;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #2c3e50;
+}
+.mod-close-btn:hover {
+  background: #d5dbdb;
+}
 .mod-change-car {
   margin-top: 15px;
   display: flex;
@@ -1378,8 +1393,9 @@ function canUpgradeMod(partKey) {
   const mod = MODIFICATIONS[partKey];
   if (!mod) return { can: false, reason: '部位不存在' };
   const curLv = G.mods[partKey] || 0;
-  if (curLv >= mod.levels.length) return { can: false, reason: '已满级' };
-  const nextLv = mod.levels[curLv];
+  const maxLv = Object.keys(mod.levels).length - 1;
+  if (curLv >= maxLv) return { can: false, reason: '已满级' };
+  const nextLv = mod.levels[curLv + 1];
   if (nextLv.cost > G.money) return { can: false, reason: '钱不够（需要¥' + nextLv.cost + '）' };
   if (nextLv.materials && !hasMaterials(nextLv.materials)) return { can: false, reason: '材料不够' };
   if (nextLv.location) {
@@ -3234,6 +3250,7 @@ setInterval(()=>{ saveGame(); }, 60000);
   <span class="mod-close" onclick="closeModPanel()">×</span>
   <div id="mod-panel">
     <h2>🔧 车辆改装</h2>
+    <button class="mod-close-btn" onclick="closeModPanel()">关闭</button>
     <div class="mod-car-info" id="mod-car-info"></div>
     <div id="mod-parts"></div>
     <div class="mod-change-car" id="mod-change-car"></div>
