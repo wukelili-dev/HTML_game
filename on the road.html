@@ -1789,6 +1789,21 @@ function actExplore(){
   }, 600);
 }
 
+function actBath(){
+  if((G.mods.bath||0) < 2){ addEvent('还没有淋浴设施。','system'); return; }
+  if(G.water < 15){ addEvent('水不够洗澡（需要15L）。','warning'); return; }
+  if(G.battery < 3){ addEvent('电量不够热水器（需要3kWh）。','warning'); return; }
+  G.water = clamp(G.water - 15, 0, G.maxWater);
+  G.battery = clamp(G.battery - 3, 0, G.maxBattery);
+  G.stats.mood = clamp(G.stats.mood + 5, 0, 100);
+  G.stats.energy = clamp(G.stats.energy + 10, 0, 100);
+  advanceTime(1);
+  let bathText = (G.mods.bath||0) >= 3 ? '热水从头顶浇下来，整个人都活了。\n太舒服了，不想出来。' : '凉水淋浴，冷得打了个激灵。\n不过洗完确实清爽了。';
+  addEvent(bathText, 'good');
+  addEvent(`💧 耗水15L（${G.water}/${G.maxWater}L），🔋 耗电3kWh（${G.battery}/${G.maxBattery}kWh）。`,'system');
+  render();
+}
+
 function actRest(){
   addEvent('你躺下来，闭上眼睛。','atmosphere');
   advanceTime(2);
@@ -1853,6 +1868,11 @@ function actCook(){
         G.stats.mood = clamp(G.stats.mood + 3, 0, 100);
         advanceTime(1);
         addEvent(`你在厨房里做了一顿热乎乎的饭。${it.icon}${name}变成了美味的一餐。`,'good');
+        // 水路Lv1+烹饪耗水5L
+        if((G.mods.water||0) >= 1 && G.water >= 5){
+          G.water = clamp(G.water - 5, 0, G.maxWater);
+          addEvent(`💧 做饭用水5L（${G.water}/${G.maxWater}L）。`,'system');
+        }
         // 厨房Lv2+耗电（小冰箱+操作台）
         if((G.mods.kitchen||0) >= 2 && G.battery > 0){
           let drain = (G.mods.kitchen||0) >= 3 ? 5 : 2;
@@ -2575,6 +2595,9 @@ function render(){
   if(!hasDrinkItems) drinkLabel = G.water > 0 ? '喝水' : '没水喝';
   actHtml += `<button class="action-btn" onclick="actDrink()" ${(hasDrinkItems||G.water>0)?'':'disabled'}>${drinkLabel}</button>`;
   actHtml += `<button class="action-btn" onclick="actRest()" ${canRest?'':'disabled'}>休息</button>`;
+  // 洗澡按钮：卫浴Lv2+且水路Lv1+
+  let canBath = (G.mods.bath||0) >= 2 && (G.mods.water||0) >= 1 && G.water >= 15 && G.battery >= 3;
+  actHtml += `<button class="action-btn" onclick="actBath()" ${canBath?'':'disabled'}>洗澡</button>`;
   actHtml += `<button class="action-btn" onclick="actLookWindow()">看窗外</button>`;
   actHtml += `<button class="action-btn" onclick="actWork()" ${!G.explored&&G.stats.energy>=25&&G.weather!=='heavy_rain'?'':'disabled'}>打工赚钱</button>`;
   actHtml += `<br style="clear:both"><div style="height:6px"></div>`;
