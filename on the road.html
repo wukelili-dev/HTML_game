@@ -1498,6 +1498,8 @@ function newDay(){
   addEvent(WEATHERS[w].desc, 'atmosphere');
   // 天气变化时触发通用事件（20%概率）
   triggerGeneralEvent('weather', 0.2);
+  // 节日时间事件（30%概率）
+  triggerGeneralEvent('time', 0.3);
   // Random narration
   let narrs = NARRATIONS[G.weather] || NARRATIONS.cloudy;
   if(Math.random()<0.6) addEvent(narrs[Math.floor(Math.random()*narrs.length)],'atmosphere');
