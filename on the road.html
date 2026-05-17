@@ -18,7 +18,7 @@ body{background:#fafafa;color:#333;font-family:'Noto Serif SC',serif;font-size:1
 .header h1{font-size:20px;color:#666;font-weight:400;letter-spacing:8px}
 .header .info{font-size:11px;color:#999;margin-top:4px;letter-spacing:2px}
 .main-content{display:flex;gap:12px;min-height:420px}
-.left-panel{flex:1;overflow-y:auto;max-height:480px;padding-right:8px}
+.left-panel{flex:1;overflow-y:auto;min-height:400px;padding-right:8px}
 .right-panel{width:240px;flex-shrink:0}
 
 /* Event Log */
@@ -76,7 +76,7 @@ body{background:#fafafa;color:#333;font-family:'Noto Serif SC',serif;font-size:1
 .stat-bar-fill.mood{background:#ab47bc}
 .stat-val{width:30px;text-align:right;font-size:11px;color:#999}
 
-.info-row{display:flex;justify-content:space-between;font-size:12px;color:#888;padding:3px 0;border-top:1px solid #eee;margin-top:4px;padding-top:6px}
+.info-row{display:flex;justify-content:space-between;font-size:11px;color:#888;padding:1px 0;border-top:1px solid #eee;margin-top:2px;padding-top:3px}
 .info-row .val{color:#555}
 
 /* Weather */
@@ -262,8 +262,7 @@ body{background:#fafafa;color:#333;font-family:'Noto Serif SC',serif;font-size:1
         <div class="info-row"><span>💧 水量</span><span class="val" id="val-water">20/20L</span></div>
         <div class="info-row" id="battery-row" style="display:none"><span>🔋 电池</span><div class="stat-bar" style="flex:1;margin:0 6px"><div class="stat-bar-fill energy" id="bar-battery" style="width:0%"></div></div><span class="val" id="val-battery">无</span></div>
         <div class="info-row"><span>📍 位置</span><span class="val" id="val-location">鹿角湾</span></div>
-        <div class="info-row"><span>🛣️ 里程</span><span class="val" id="val-distance">0km</span></div>
-        <div class="info-row"><span>🗺️ 探索</span><span class="val" id="val-explored">0/7</span></div>
+        <div class="info-row"><span>🛣️ 里程/探索</span><span class="val"><span id="val-distance">0km</span> · <span id="val-explored">0/7</span></span></div>
       </div>
     </div>
   </div>
