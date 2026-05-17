@@ -1964,7 +1964,7 @@ function actDrive(){
   let elecCost = Math.ceil(dist*0.2); // 设计文档：10kWh/50km = 2kWh/10km
 
   let canFuel = G.fuel >= fuelCost;
-  let canElec = G.hasSolar && G.maxBattery > 0 && G.battery >= elecCost;
+  let canElec = (G.mods.engine||0) >= 3 && G.maxBattery > 0 && G.battery >= elecCost; // 混动Lv3才能用电驾驶
 
   pendingDrive = { dest, dist, fuelCost, elecCost };
 
