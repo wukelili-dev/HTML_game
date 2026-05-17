@@ -1285,6 +1285,8 @@ function changeCar(newCarType) {
   G.carType = newCarType;
   G.carChanges = (G.carChanges || 0) + 1;
   updateSlots();
+  // 重新应用所有改装效果（便携类保留的+固定类归零后的）
+  Object.keys(G.mods).forEach(k => applyModEffects(k));
   refund.forEach(m => G.storage.push(m));
   if (refund.length > 0) {
     addEvent('换了' + newCar.name + '，回收了：' + refund.join('、'), 'good');
