@@ -910,6 +910,32 @@ const GENERAL_EVENTS = {
       id: 'rest_dream_home',
       text: '你做了一个梦。\n梦到家里的厨房，灶上炖着汤，窗户开着，风把窗帘吹起来。\n你妈叫你吃饭。\n醒来的时候，车里很安静。',
       effects: [{ type:'mood', value:0.5 }]
+    },
+    {
+      id: 'rest_starwatch',
+      text: '关了灯，拉开窗帘。\n银河就挂在车顶上方，密密麻麻的星星亮得不像话。\n躺在床上看了很久。',
+      effects: [{ type:'mood', value:3 }, { type:'bodyTemp', value:-1 }]
+    },
+    {
+      id: 'rest_journal',
+      text: '翻出笔记本，想写点什么。\n写了两行又划掉了。\n最后画了只猫，趴在方向盘上那种。',
+      effects: [{ type:'mood', value:1 }, { type:'energy', value:2 }]
+    },
+    {
+      id: 'rest_leak',
+      text: '"滴答、滴答……"\n车顶某处在漏水，水珠正好落在枕头上。\n得找个盆接着，今晚别想睡好了。',
+      choices: [
+        { text:'拿盆接着继续睡', effects:[{ type:'mood', value:-1 }, { type:'energy', value:-5 }] },
+        { text:'爬上顶补一下', effects:[{ type:'energy', value:-15 }, { type:'bodyTemp', value:-2 }], conditions:{ weather:['clear','cloudy'] } }
+      ]
+    },
+    {
+      id: 'rest_campfire_neighbor',
+      text: '隔壁车位支了个篝火，有人在弹吉他。\n曲子听不太清，但旋律飘了过来。\n火光映在车窗上，暖洋洋的。',
+      choices: [
+        { text:'过去坐坐', effects:[{ type:'mood', value:2 }, { type:'hunger', value:5 }, { type:'energy', value:-5 }] },
+        { text:'在车里听就好', effects:[{ type:'mood', value:1 }] }
+      ]
     }
   ],
   
