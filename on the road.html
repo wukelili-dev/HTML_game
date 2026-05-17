@@ -120,6 +120,30 @@ body{background:#fafafa;color:#333;font-family:'Noto Serif SC',serif;font-size:1
 .modal h2{font-size:14px;color:#666;margin-bottom:12px;letter-spacing:2px}
 .modal .close-btn{float:right;cursor:pointer;color:#bbb;font-size:18px}
 .modal .close-btn:hover{color:#666}
+
+/* Radio Modal */
+#radio-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center}
+#radio-modal.active{display:flex}
+#radio-modal .modal{background:#1a1a1a;color:#e0e0e0;border-radius:10px;padding:16px;max-width:360px;width:90%;font-size:13px}
+#radio-modal .modal h2{color:#ffcc00;text-align:center;font-size:15px;letter-spacing:2px;margin-bottom:12px}
+.signal-bar{display:flex;gap:3px;margin-bottom:12px;justify-content:center}
+.signal-bar span{font-size:18px;color:#555}
+.signal-bar span.on{color:#ffcc00}
+.signal-bar span.low{color:#f57c00}
+.signal-bar span.bad{color:#c62828}
+.band-tabs{display:flex;gap:6px;margin-bottom:10px}
+.band-tab{flex:1;padding:6px 4px;text-align:center;border-radius:6px;cursor:pointer;font-size:12px;border:1px solid #333;color:#888;background:#222}
+.band-tab.active{background:#ffcc00;color:#1a1a1a;font-weight:700}
+.station-list{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;margin-bottom:10px}
+.station-item{background:#222;border:1px solid #333;border-radius:6px;padding:8px;cursor:pointer}
+.station-item:hover{border-color:#ffcc00}
+.station-item .station-title{font-size:14px;color:#e0e0e0;margin-bottom:2px}
+.station-item .station-desc{font-size:11px;color:#888}
+.station-item.selected{background:#2a2a00;border-color:#ffcc00}
+.radio-footer{display:flex;justify-content:center}
+.radio-listen-btn{padding:10px 32px;background:#ffcc00;color:#1a1a1a;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer}
+.radio-listen-btn:hover{background:#e6b800}
+.radio-listen-btn:disabled{background:#555;color:#888;cursor:not-allowed}
 .modal .item-list{list-style:none}
 .modal .item-entry{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
 .modal .item-entry .item-name{color:#555;font-size:12px}
@@ -265,6 +289,21 @@ body{background:#fafafa;color:#333;font-family:'Noto Serif SC',serif;font-size:1
   </div>
 </div>
 
+<!-- Radio Modal -->
+<div class="modal-overlay" id="radio-modal">
+  <div class="modal">
+    <span class="close-btn" onclick="closeRadio()" style="color:#888">✕</span>
+    <h2>📻 收音机</h2>
+    <div class="signal-bar" id="signal-bar"></div>
+    <div class="band-tabs" id="band-tabs"></div>
+    <div class="station-list" id="station-list"></div>
+    <div class="radio-footer">
+      <button class="radio-listen-btn" id="radio-listen-btn" onclick="listenToStation()">📡 收听</button>
+    </div>
+    <div id="radio-result" style="margin-top:8px;text-align:center;font-size:12px;color:#888;min-height:20px"></div>
+  </div>
+</div>
+
 <script>
 // ==================== GAME STATE ====================
 const G = {
@@ -273,7 +312,7 @@ const G = {
   timeNames: ['清晨','上午','下午','傍晚','夜晚'],
   weather: 'light_rain',
   location: '鹿角湾',
-  stats: { food: 80, hunger: 70, warmth: 65, energy: 80, mood: 50 },
+  stats: { hunger: 70, warmth: 65, energy: 80, mood: 50, radio: { signal: 80, currentBand: 'am', unlocked: true } },
   money: 500,
   fuel: 40,
   maxFuel: 100,
@@ -426,6 +465,23 @@ const MODIFICATIONS = {
 };
 
 // ==================== DATA ====================
+const RADIO_STATIONS = {
+  am: [
+    { title:'新闻广播', desc:'经济不景气，物价持续上涨', effect:{ money: -50 } },
+    { title:'交通播报', desc:'前方路段畅通', effect:{ fuel: 5 } },
+    { title:'求职广告', desc:'高薪工作招人', effect:{ money: 100 }, trigger:'random' },
+  ],
+  fm: [
+    { title:'怀旧金曲', desc:'经典老歌勾起回忆', effect:{ mood: 10 } },
+    { title:'点歌节目', desc:'为旅人点歌送祝福', effect:{ mood: 15, food: -5 } },
+  ],
+  sw: [
+    { title:'神秘电波', desc:'奇怪的加密信号', effect:{ mood: 5 }, probability:0.6 },
+    { title:'求救信号', desc:'有人需要帮助', effect:{}, trigger:'event' },
+    { title:'沙沙噪音', desc:'全是杂音', effect:{} },
+  ]
+};
+
 const WEATHERS = {
   sunny:      { icon:'☀️', name:'晴', desc:'阳光透过车窗洒进来', exploreMod:1.2, moodMod:0, warmthMod:0.5, solarCharge:1.0 },
   cloudy:     { icon:'⛅', name:'多云', desc:'天空灰蒙蒙的', exploreMod:1, moodMod:0, warmthMod:0, solarCharge:0.5 },
@@ -2121,24 +2177,132 @@ function actDrink(){
   }
 }
 
-function actListenRadio(){
-  if(!G.rvSlots.driver.item || G.rvSlots.driver.item==='破旧驾驶座'){
-    addEvent('收音机坏了，只能收到滋滋的杂音。','warning');
-    return;
+// ==================== RADIO SYSTEM ====================
+let radioSelected = null;
+
+function openRadio(){
+  if(G.stats.radio && G.stats.radio.unlocked===false){
+    addEvent('收音机还没解锁。','system'); return;
   }
-  advanceTime(1);
-  let msgs = [
-    '收音机里传来天气预报：明天可能转晴。',
-    '一段老歌，旋律模糊不清，但你忍不住跟着哼了两句。',
-    '"……7号公路……注意……" 信号断了。',
-    '收音机里只有白噪音，什么都没有。',
-    '有人在广播里读诗。声音很远，像是从另一个世界传来的。',
-    '"前方路段施工，建议绕行。" 至少路还通着。'
-  ];
-  addEvent(msgs[Math.floor(Math.random()*msgs.length)],'discovery');
-  G.stats.mood = clamp(G.stats.mood + 1, 0, 100);
-  render();
+  if(!G.rvSlots.driver.item || G.rvSlots.driver.item==='破旧驾驶座'){
+    addEvent('收音机坏了，只能收到滋滋的杂音。','warning'); return;
+  }
+  radioSelected = null;
+  document.getElementById('radio-result').textContent = '';
+  renderRadio();
+  document.getElementById('radio-modal').classList.add('active');
 }
+
+function closeRadio(){
+  document.getElementById('radio-modal').classList.remove('active');
+}
+
+function renderRadio(){
+  let r = G.stats.radio;
+  // Signal bar (10 segments)
+  let sig = Math.round(r.signal / 10);
+  let bars = [];
+  for(let i=0;i<10;i++){
+    let cls = i<sig ? (r.signal<40?'bad':r.signal<60?'low':'on') : '';
+    bars.push(`<span class="${cls}">${i<sig?'🌕':'🌑'}</span>`);
+  }
+  document.getElementById('signal-bar').innerHTML = `信号强度 ${r.signal}% ` + bars.join('');
+
+  // Band tabs
+  let bands = ['am','fm','sw'];
+  let bandNames = {am:'AM 中波', fm:'FM 调频', sw:'SW 短波'};
+  let tabsHtml = bands.map(b => {
+    return `<div class="band-tab ${r.currentBand===b?'active':''}" onclick="switchBand('${b}')">${bandNames[b]}</div>`;
+  }).join('');
+  document.getElementById('band-tabs').innerHTML = tabsHtml;
+
+  // Station list
+  renderStationList();
+}
+
+function switchBand(band){
+  G.stats.radio.currentBand = band;
+  radioSelected = null;
+  document.getElementById('radio-result').textContent = '';
+  renderStationList();
+  let tabs = document.getElementById('band-tabs');
+  let children = tabs.querySelectorAll('.band-tab');
+  let bands = ['am','fm','sw'];
+  children.forEach((el,i) => { el.classList.toggle('active', bands[i]===band); });
+}
+
+function renderStationList(){
+  let band = G.stats.radio.currentBand;
+  let stations = RADIO_STATIONS[band];
+  let list = document.getElementById('station-list');
+  let html = stations.map((s,i) => {
+    let prob = s.probability !== undefined ? s.probability : 1;
+    let probLabel = prob < 1 ? ` (${Math.round(prob*100)}%出现)` : '';
+    return `<div class="station-item ${radioSelected===i?'selected':''}" onclick="selectStation(${i})">
+      <div class="station-title">${s.title}${probLabel}</div>
+      <div class="station-desc">${s.desc}</div>
+    </div>`;
+  }).join('');
+  list.innerHTML = html;
+  document.getElementById('radio-listen-btn').disabled = (radioSelected === null);
+}
+
+function selectStation(idx){
+  radioSelected = idx;
+  document.querySelectorAll('.station-item').forEach((el,i)=>el.classList.toggle('selected',i===idx));
+  document.getElementById('radio-listen-btn').disabled = false;
+}
+
+function listenToStation(){
+  if(radioSelected === null) return;
+  closeRadio();
+  advanceTime(1);
+  let band = G.stats.radio.currentBand;
+  let station = RADIO_STATIONS[band][radioSelected];
+
+  // Signal check: if signal<40, 60% chance of noise, effects halved
+  let isNoise = false;
+  let isNoisy = false;
+  if(G.stats.radio.signal < 40 && Math.random() < 0.6){
+    isNoise = true;
+  }
+
+  if(isNoise){
+    addEvent(`收音机里全是沙沙的杂音，什么都听不清。`,'warning');
+  } else {
+    addEvent(`—— ${station.title} ——`,'system');
+    addEvent(station.desc,'atmosphere');
+
+    // Apply effects (halved if low signal)
+    let mult = (G.stats.radio.signal < 40) ? 0.5 : 1;
+    let ef = station.effect || {};
+    for(let k in ef){
+      let val = Math.round(ef[k] * mult);
+      if(k==='money'){ G.money = Math.max(0, G.money+val); }
+      else if(k==='fuel'){ G.fuel = clamp(G.fuel+val, 0, G.maxFuel); }
+      else if(k==='food'){ G.stats.hunger = clamp(G.stats.hunger+val, 0, 100); }
+      else if(G.stats[k] !== undefined){
+        G.stats[k] = clamp(G.stats[k]+val, 0, 100);
+      }
+    }
+
+    // Trigger: random job or special event
+    if(station.trigger==='random'){
+      if(Math.random()<0.5){ addItem('零钱'); addEvent('顺手捡到了几枚硬币。','good'); }
+      else { addEvent('没有合适的职位，先等等吧。','system'); }
+    }
+    if(station.trigger==='event'){
+      setTimeout(()=>{ triggerSpecialEvent('hitchhiker'); }, 300);
+    }
+  }
+
+  render();
+  saveGame();
+}
+
+// Old radio function — replaced by openRadio
+function actListenRadio(){ openRadio(); }
+
 
 // Store pending drive info for mode selection
 let pendingDrive = null;
@@ -2828,7 +2992,7 @@ function startNewGame(){
   G.time = 0;
   G.weather = 'light_rain';
   G.location = '鹿角湾';
-  G.stats = { hunger: 70, warmth: 65, energy: 80, mood: 50 };
+  G.stats = { hunger: 70, warmth: 65, energy: 80, mood: 50, radio: { signal: 80, currentBand: 'am', unlocked: true } };
   G.money = 500;
   G.fuel = 40;
   G.water = rvData.waterCapacity;
