@@ -583,7 +583,9 @@ const LOCATION_EVENTS = {
       id: 'deer_shop_chat',
       text: '买完东西，老板娘擦着柜台，随口问：\n"你一个人在路上啊？不容易。"\n她从柜台下面拿出一包饼干：\n"拿去，快过期的，不吃也浪费了。"',
       effects: [{ type:'item', item:'饼干' }, { type:'mood', value:1 }]
-    }
+    },
+    {
+      id:'ljw_beach_find', text:'退潮后沙滩上露出一个亮闪闪的东西。\n你走过去捡起来——是个贝壳，很漂亮。', effects:[{ type:'mood', value:2 }], addItems:['贝壳'] }
   ],
   '枯木镇': [
     {
@@ -702,6 +704,9 @@ const LOCATION_EVENTS = {
       condition: { time:3, weather:'sunny' },
       text: '月亮倒在水面上，碎碎的波光。\n码头很安静，只有水流的声音。\n你坐在岸边，把脚伸进水里。\n水凉凉的。',
       effects: [{ type:'mood', value:2 }]
+    },
+    {
+      id:'jm_fisherman_tip', text:'码头边有个老渔夫在补网。\n他看了你一眼："往前走五十公里，有个岔路，左转。"\n说完就不说话了。', effects:[{ type:'mood', value:1 }]
     }
   ],
   '高原驿站': [
@@ -730,6 +735,9 @@ const LOCATION_EVENTS = {
         { text:'喝点水', effects:[{ type:'water', value:-5 }, { type:'mood', value:0.5 }] },
         { text:'吸氧（需氧气瓶）', condition:{ item:'氧气瓶' }, effects:[{ type:'mood', value:1 }] }
       ]
+    },
+    {
+      id:'gy_stargaze', text:'海拔高了，星星亮得不像话。\n你站在车顶，银河从头顶流过去。\n冷，但舍不得下来。', effects:[{ type:'mood', value:3 }, { type:'bodyTemp', value:-3 }]
     }
   ]
 };
@@ -1859,6 +1867,11 @@ function actRest(){
   if(G.weather==='light_rain'){
     addEvent('雨声伴着你入睡，比任何时候都安稳。','good');
     G.stats.mood = clamp(G.stats.mood + 2, 0, 100);
+  }
+  // 温暖的车成就：休息体力额外+20%
+  if(G.warmCar){
+    let bonus = Math.floor(30 * 0.2);
+    G.stats.energy = clamp(G.stats.energy + bonus, 0, 100);
   }
   // 电力消耗：保温Lv3(暖风机)休息时耗电
   if((G.mods.insulation||0) >= 3 && G.battery > 0){
