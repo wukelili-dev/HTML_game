@@ -859,6 +859,18 @@ const GENERAL_EVENTS = {
         { text:'凭感觉走左边', effects:[{ type:'fuel', value:-10 }], random:[{ chance:0.5, effects:[{ type:'mood', value:2 }] }, { chance:0.5, effects:[{ type:'fuel', value:-20 }, { type:'mood', value:-2 }] }] },
         { text:'走右边', effects:[{ type:'fuel', value:-15 }], random:[{ chance:0.5, effects:[{ type:'mood', value:1 }] }, { chance:0.5, effects:[{ type:'mood', value:-1 }] }] }
       ]
+    },
+    {
+      id: 'drive_hitchhiker_grandma',
+      text: '路边站着个老太太，背着个大包。\n她看见你的车就招手。\n"小伙子，能搭一段不？腿脚不好了。"',
+      effects: [{ type:'mood', value:1 }],
+      conditions: { minDay: 5 }
+    },
+    {
+      id: 'drive_roadkill_dodge',
+      text: '前面路上横着个东西，猛打方向盘躲开了。\n心跳加速，手心全是汗。\n好险。',
+      effects: [{ type:'energy', value:-3 }],
+      conditions: {}
     }
   ],
   
@@ -950,6 +962,17 @@ const GENERAL_EVENTS = {
         { text:'过去坐坐', effects:[{ type:'mood', value:2 }, { type:'hunger', value:5 }, { type:'energy', value:-5 }] },
         { text:'在车里听就好', effects:[{ type:'mood', value:1 }] }
       ]
+    },
+    {
+      id: 'rest_dream_home',
+      text: '做了一个梦。梦到自己有个家，很大，很亮。\n醒来的时候，车厢很小，但很安静。\n也行。',
+      effects: [{ type:'mood', value:2 }]
+    },
+    {
+      id: 'rest_leak_drip',
+      text: '滴答、滴答。\n车顶某个地方在漏水，水滴落在铁皮上。\n你拿了个杯子接住，居然接了半杯。\n明天得补补。',
+      effects: [{ type:'mood', value:-1 }],
+      conditions: { afterRain: true }
     }
   ],
   
@@ -1560,6 +1583,12 @@ function newDay(){
       addEvent(`☀️ 太阳能充电${chargeAmount}kWh（${G.battery}/${G.maxBattery}kWh）。`,'good');
     }
   }
+
+  // Battery drain per day
+  let baseDrain = 2; // kWh per day baseline
+  if(G.mods.electric >= 2) baseDrain = 1; // efficient wiring reduces drain
+  G.battery = clamp(G.battery - baseDrain, 0, G.maxBattery);
+  if(G.battery <= 0 && G.maxBattery > 0) addEvent('电池没电了，所有电器停工。','warning');
 }
 
 function addEvent(text, cls=''){
@@ -2032,9 +2061,14 @@ function actDrive(){
 
   let dest = others[Math.floor(Math.random()*others.length)];
   let dist = Math.floor(Math.random()*20)+10;
-  let fuelCost = Math.ceil(dist*0.1 * (G.fuelRate || 1)); // 动力改装省油
+  let fuelNeeded = dist * 0.1 * (G.fuelRate || 1);
+  let fuelCost = Math.ceil(fuelNeeded); // 动力改装省油
   let elecCost = Math.ceil(dist*0.2); // 设计文档：10kWh/50km = 2kWh/10km
 
+  if(G.fuel < fuelNeeded) {
+    addEvent('油不够了，开不动。','warning');
+    return;
+  }
   let canFuel = G.fuel >= fuelCost;
   let canElec = (G.mods.engine||0) >= 3 && G.maxBattery > 0 && G.battery >= elecCost; // 混动Lv3才能用电驾驶
 
