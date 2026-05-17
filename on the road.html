@@ -1052,6 +1052,28 @@ const GENERAL_EVENTS = {
     }
   ],
   
+  // 节日时间事件
+  time: [
+    {
+      id: 'time_new_year',
+      text: '手机上显示00:00。\n新年了。\n你一个人坐在车里，外面有人在放烟花。\n远处的夜空亮了一下，又亮了一下。\n"新年快乐。"你对自己说。',
+      effects: [{ type:'mood', value:3 }],
+      conditions: { minDay: 30 }
+    },
+    {
+      id: 'time_mid_autumn',
+      text: '月亮又大又圆，挂在公路尽头。\n你想起来今天是中秋。\n翻遍储物箱找到一块饼干，对着月亮举了举。\n也算过了。',
+      effects: [{ type:'mood', value:2 }, { type:'hunger', value:5 }],
+      conditions: { minDay: 20 }
+    },
+    {
+      id: 'time_christmas',
+      text: '车窗外飘着雪，收音机里放着Jingle Bells。\n你不信教，但觉得今天应该对自己好一点。\n热水泡了杯速溶，算是过节了。',
+      effects: [{ type:'mood', value:2 }, { type:'warmth', value:5 }],
+      conditions: { minDay: 40 }
+    }
+  ],
+  
   // 麻烦事件
   trouble: [
     {
