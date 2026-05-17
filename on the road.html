@@ -223,6 +223,7 @@ body{background:#fafafa;color:#333;font-family:'Noto Serif SC',serif;font-size:1
       <div class="status-panel">
         <h3>状 态</h3>
         <div class="stat-row"><span class="stat-icon">🍖</span><span class="stat-name">饱食</span><div class="stat-bar"><div class="stat-bar-fill hunger" id="bar-hunger" style="width:70%"></div></div><span class="stat-val" id="val-hunger">70</span></div>
+        <div class="stat-row"><span class="stat-icon">🍽️</span><span class="stat-name">食物</span><div class="stat-bar"><div class="stat-bar-fill food" id="bar-food" style="width:80%"></div></div><span class="stat-val" id="val-food">80</span></div>
         <div class="stat-row"><span class="stat-icon">🌡️</span><span class="stat-name">体温</span><div class="stat-bar"><div class="stat-bar-fill warmth" id="bar-warmth" style="width:65%"></div></div><span class="stat-val" id="val-warmth">65</span></div>
         <div class="stat-row"><span class="stat-icon">⚡</span><span class="stat-name">体力</span><div class="stat-bar"><div class="stat-bar-fill energy" id="bar-energy" style="width:80%"></div></div><span class="stat-val" id="val-energy">80</span></div>
         <div class="stat-row"><span class="stat-icon">💚</span><span class="stat-name">心情</span><div class="stat-bar"><div class="stat-bar-fill mood" id="bar-mood" style="width:50%"></div></div><span class="stat-val" id="val-mood">50</span></div>
@@ -272,7 +273,7 @@ const G = {
   timeNames: ['清晨','上午','下午','傍晚','夜晚'],
   weather: 'light_rain',
   location: '鹿角湾',
-  stats: { hunger: 70, warmth: 65, energy: 80, mood: 50 },
+  stats: { food: 80, hunger: 70, warmth: 65, energy: 80, mood: 50 },
   money: 500,
   fuel: 40,
   maxFuel: 100,
@@ -1748,6 +1749,33 @@ function applyEffects(effects){
       case 'warmth':
         G.stats.warmth = clamp(G.stats.warmth + e.value, 0, 100);
         break;
+      case 'food':
+        G.stats.food = clamp(G.stats.food + e.value, 0, 100);
+        break;
+      case 'addItems':
+        if(Array.isArray(e.items)){
+          for(const it of e.items){
+            const name = it.name || it;
+            // 确保ALL_ITEMS里有定义再添加
+            if(ALL_ITEMS[name]){
+              addItem(name);
+              addEvent(`获得：${ALL_ITEMS[name].icon||''}${name}`, 'good');
+            } else {
+              // 动态创建临时物品（野外事件掉落）
+              const tempItem = {
+                icon: it.icon || '📦',
+                desc: it.desc || name,
+                type: it.type || 'food',
+                instant: it.type === 'food' || it.type === 'ingredient',
+                price: 0
+              };
+              ALL_ITEMS[name] = tempItem;
+              addItem(name);
+              addEvent(`获得：${tempItem.icon||''}${name}`, 'good');
+            }
+          }
+        }
+        break;
       case 'money':
         G.money += e.value;
         if(e.value < 0) addEvent(`花费 ¥${-e.value}`, 'system');
@@ -2634,7 +2662,7 @@ function render(){
   document.getElementById('header-info').textContent = `第 ${G.day} 天 · ${G.timeNames[G.time]} · ${G.location}`;
 
   // Stats
-  ['hunger','warmth','energy','mood'].forEach(s=>{
+  ['food','hunger','warmth','energy','mood'].forEach(s=>{
     document.getElementById('bar-'+s).style.width = G.stats[s]+'%';
     document.getElementById('val-'+s).textContent = Math.round(G.stats[s]);
   });
