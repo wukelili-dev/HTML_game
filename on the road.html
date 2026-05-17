@@ -178,6 +178,7 @@ body{background:#fafafa;color:#333;font-family:'Noto Serif SC',serif;font-size:1
 }
 #mod-modal.open { display: block; }
 #mod-panel {
+  position: relative;
   max-width: 600px;
   margin: 0 auto;
   background: #fff;
@@ -231,7 +232,7 @@ body{background:#fafafa;color:#333;font-family:'Noto Serif SC',serif;font-size:1
 .mod-close-btn {
   position: absolute;
   top: 15px;
-  right: 20px;
+  right: 60px;
   padding: 6px 16px;
   background: #ecf0f1;
   border: 1px solid #bdc3c7;
@@ -1607,12 +1608,34 @@ function renderModPanel() {
   let partsHtml = '';
   for (const [key, mod] of Object.entries(MODIFICATIONS)) {
     const lv = G.mods[key] || 0;
+    const maxLv = Object.keys(mod.levels).length - 1;
     const check = canUpgradeMod(key);
     const btnClass = check.can ? '' : 'disabled';
-    const btnText = lv >= mod.levels.length ? '已满' : '升级';
-    partsHtml += `<div class="mod-part">
-      <span class="mod-part-name">${mod.name}</span>
-      <span class="mod-part-level">Lv${lv}</span>
+    const btnText = lv >= maxLv ? '已满' : '升级';
+    
+    // 当前等级效果
+    const curEffect = mod.levels[lv] ? mod.levels[lv].effect : '无';
+    // 下一级信息
+    let nextInfo = '';
+    if (lv < maxLv) {
+      const next = mod.levels[lv + 1];
+      nextInfo = `下一级：${next.name}（${next.effect}）<br>费用：¥${next.cost}`;
+      if (next.materials && next.materials.length > 0) {
+        nextInfo += `<br>材料：${[...new Set(next.materials)].map(m => m + '×' + next.materials.filter(x=>x===m).length).join('、')}`;
+      }
+      if (next.requires && Object.keys(next.requires).length > 0) {
+        const reqs = Object.entries(next.requires).map(([k,v]) => `${MODIFICATIONS[k].name} Lv${v}`).join('、');
+        nextInfo += `<br>需要：${reqs}`;
+      }
+    }
+    
+    partsHtml += `<div class="mod-part" style="align-items:flex-start">
+      <div style="flex:1">
+        <span class="mod-part-name">${mod.name}</span>
+        <span class="mod-part-level">Lv${lv}</span>
+        <div style="font-size:12px;color:#888;margin-top:4px">当前：${curEffect}</div>
+        ${nextInfo ? `<div style="font-size:12px;color:#2ecc71;margin-top:2px">${nextInfo}</div>` : `<div style="font-size:12px;color:#e74c3c;margin-top:2px">已满级</div>`}
+      </div>
       <button class="mod-part-btn ${btnClass}" onclick="doUpgradeMod(event, '${key}')">${btnText}</button>
     </div>`;
   }
