@@ -143,7 +143,13 @@ body{background:#fafafa;color:#333;font-family:'Noto Serif SC',serif;font-size:1
 .radio-footer{display:flex;justify-content:center}
 .radio-listen-btn{padding:10px 32px;background:#ffcc00;color:#1a1a1a;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer}
 .radio-listen-btn:hover{background:#e6b800}
-.radio-listen-btn:disabled{background:#555;color:#888;cursor:not-allowed}
+#hitchhiker-modal .modal{background:#1a2a1a;color:#c8e6c8;border-radius:10px;padding:16px;max-width:300px;width:90%;font-size:13px}
+.hitchhiker-item{padding:10px 0;border-bottom:1px solid #2a3a2a;font-size:13px}
+.hitchhiker-item:last-child{border-bottom:none}
+.hitchhiker-name{font-weight:700;color:#87ceeb;margin-bottom:4px}
+.hitchhiker-skills{color:#8fbc8f;margin:2px 0}
+.hitchhiker-special{color:#98fb98;font-size:12px;margin:2px 0}
+.hitchhiker-dismiss{float:right;background:#555;color:#ccc;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px}
 .modal .item-list{list-style:none}
 .modal .item-entry{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
 .modal .item-entry .item-name{color:#555;font-size:12px}
@@ -301,6 +307,16 @@ body{background:#fafafa;color:#333;font-family:'Noto Serif SC',serif;font-size:1
       <button class="radio-listen-btn" id="radio-listen-btn" onclick="listenToStation()">📡 收听</button>
     </div>
     <div id="radio-result" style="margin-top:8px;text-align:center;font-size:12px;color:#888;min-height:20px"></div>
+  </div>
+</div>
+
+<!-- Hitchhiker Panel -->
+<div class="modal-overlay" id="hitchhiker-modal" onclick="if(event.target===this)closeHitchhikerPanel()">
+  <div class="modal" style="max-width:300px">
+    <span class="close-btn" onclick="closeHitchhikerPanel()" style="color:#888">✕</span>
+    <h2 style="color:#87ceeb">👥 搭车人</h2>
+    <div id="hitchhiker-list"></div>
+    <div style="text-align:center;margin-top:12px"><button class="radio-listen-btn" onclick="closeHitchhikerPanel()">关闭</button></div>
   </div>
 </div>
 
@@ -464,7 +480,31 @@ const MODIFICATIONS = {
   }
 };
 
-// ==================== DATA ====================
+const HITCHHIKER_POOL = [
+  { name:'老张', skill:'修车', mood:60, special:'车抛锚时可能修好' },
+  { name:'小梅', skill:'烹饪', mood:80, special:'烹饪时饱食+15，心情+5' },
+  { name:'背包客阿康', skill:'导航', mood:70, special:'探索体力消耗-3' },
+  { name:'流浪诗人', skill:'文艺', mood:90, special:'心情每天+2' },
+  { name:'卡车司机老赵', skill:'货运', mood:50, special:'交易价格+10%' },
+  { name:'退休教师王阿姨', skill:'护理', mood:75, special:'体力每天+5' },
+];
+
+function triggerSpecialEvent(type){
+  if(type==='hitchhiker'){
+    if(!G.stats.hitchhikers) G.stats.hitchhikers = [];
+    if(G.stats.hitchhikers.length >= 2){
+      addEvent('车已经坐满了，婉拒了这位想搭车的人。','system'); return;
+    }
+    let candidates = HITCHHIKER_POOL.filter(h => !G.stats.hitchhikers.find(x=>x.name===h.name));
+    if(candidates.length===0){ addEvent('没能遇到愿意搭车的人。','system'); return; }
+    let p = candidates[Math.floor(Math.random()*candidates.length)];
+    G.stats.hitchhikers.push({...p, days:0});
+    addEvent(`在路上遇到了${p.name}，TA想搭个顺风车。`,'good');
+    addEvent(`技能：${p.skill} | ${p.special}`,'system');
+    render();
+  }
+}
+
 const RADIO_STATIONS = {
   am: [
     { title:'新闻广播', desc:'经济不景气，物价持续上涨', effect:{ money: -50 } },
@@ -1632,6 +1672,10 @@ function newDay(){
   G.weather = w;
   addEvent(`—— 第${G.day}天 ——`,'system');
   addEvent(WEATHERS[w].desc, 'atmosphere');
+  // 每天2%概率遇到搭车人
+  if(Math.random() < 0.02) triggerSpecialEvent('hitchhiker');
+  // 搭车人每日效果
+  applyHitchhikerDailyEffects();
   // 天气变化时触发通用事件（20%概率）
   triggerGeneralEvent('weather', 0.2);
   // 节日时间事件（30%概率）
@@ -2065,6 +2109,7 @@ function actCook(){
           G.stats.mood = clamp(G.stats.mood + 3, 0, 100);
           addEvent('野果洗了洗，一口一个。简单，但满足。','good');
           advanceTime(0.5);
+          applyCookingBonus(); // 烹饪搭车人加成
           render(); return;
         }
         if(name==='鲜鱼' || name==='大米') {
@@ -2074,12 +2119,14 @@ function actCook(){
             G.stats.food = clamp(G.stats.food + 35, 0, 100);
             G.stats.mood = clamp(G.stats.mood + 10, 0, 100);
             addEvent('鱼汤泡饭，热气腾腾。吃完浑身暖和。','good');
-          } else if(name==='鲜鱼') {
+          }
+          applyCookingBonus(); // 烹饪搭车人加成
             removeItem('鲜鱼',1);
             G.stats.food = clamp(G.stats.food + 25, 0, 100);
             G.stats.mood = clamp(G.stats.mood + 8, 0, 100);
             addEvent('鱼烤得外焦里嫩，一个人吃完了整条。','good');
-          } else {
+          }
+          applyCookingBonus(); // 烹饪搭车人加成
             removeItem('大米',1);
             G.stats.food = clamp(G.stats.food + 20, 0, 100);
             G.stats.mood = clamp(G.stats.mood + 5, 0, 100);
@@ -2116,6 +2163,7 @@ function actCook(){
         G.stats.hunger = clamp(G.stats.hunger + (it.effect.hunger||0) + 10, 0, 100);
         G.stats.mood = clamp(G.stats.mood + 1, 0, 100);
         advanceTime(0.5);
+        applyCookingBonus(); // 烹饪搭车人加成
         addEvent(`你把${it.icon}${name}加热了一下。热乎乎的，比干吃好多了。`,'good');
         render();
         return;
@@ -2303,6 +2351,89 @@ function listenToStation(){
 // Old radio function — replaced by openRadio
 function actListenRadio(){ openRadio(); }
 
+// ==================== HITCHHIKER PANEL ====================
+function openHitchhikerPanel(){
+  renderHitchhikerList();
+  document.getElementById('hitchhiker-modal').classList.add('active');
+}
+
+function closeHitchhikerPanel(){
+  document.getElementById('hitchhiker-modal').classList.remove('active');
+}
+
+function renderHitchhikerList(){
+  let list = G.stats.hitchhikers || [];
+  let el = document.getElementById('hitchhiker-list');
+  if(list.length===0){
+    el.innerHTML = '<div style="text-align:center;color:#888;padding:16px">暂无搭车人</div>';
+    return;
+  }
+  el.innerHTML = list.map((h,i)=>`
+    <div class="hitchhiker-item">
+      <div class="hitchhiker-name">${h.name}</div>
+      <div class="hitchhiker-skills">🎯 ${h.skill}</div>
+      <div class="hitchhiker-special">✨ ${h.special}</div>
+      <button class="hitchhiker-dismiss" onclick="dismissHitchhiker(${i})">请下车</button>
+    </div>
+  `).join('');
+}
+
+function dismissHitchhiker(idx){
+  let h = G.stats.hitchhikers[idx];
+  G.stats.hitchhikers.splice(idx,1);
+  G.stats.mood = Math.min(100, G.stats.mood + 3);
+  addEvent(`${h.name}在路边下了车，谢谢你捎TA一程。`,'system');
+  closeHitchhikerPanel();
+  render();
+}
+
+// Check hitchhiker departure before driving
+function checkHitchhikerDeparture(){
+  let list = G.stats.hitchhikers || [];
+  let toRemove = [];
+  list.forEach((h,i)=>{
+    if(Math.random() < 0.2){
+      toRemove.push(i);
+      addEvent(`${h.name}在前面的路口下了车，跟你道了别。`,'system');
+      G.stats.mood = Math.min(100, G.stats.mood + 5);
+    }
+  });
+  for(let i=toRemove.length-1;i>=0;i--) list.splice(toRemove[i],1);
+}
+
+// Daily effects from hitchhikers
+function applyHitchhikerDailyEffects(){
+  let list = G.stats.hitchhikers || [];
+  if(list.length===0 || G.stats.mood < 40) return;
+  list.forEach(h=>{
+    h.days++;
+    if(h.skill==='护理') G.stats.energy = Math.min(100, G.stats.energy + 5);
+    if(h.skill==='文艺') G.stats.mood = Math.min(100, G.stats.mood + 2);
+  });
+}
+
+// Cooking bonus from hitchhiker
+function applyCookingBonus(){
+  let list = G.stats.hitchhikers || [];
+  let cook = list.find(h=>h.skill==='烹饪' && G.stats.mood>=40);
+  if(cook){ G.stats.food = Math.min(100, G.stats.food+15); G.stats.mood = Math.min(100, G.stats.mood+5); }
+}
+
+// Explore energy reduction from navigator
+function getExploreEnergyMod(){
+  let list = G.stats.hitchhikers || [];
+  if(list.find(h=>h.skill==='导航' && G.stats.mood>=40)) return -3;
+  return 0;
+}
+
+// Price modifier from trucker
+function getPriceMod(){
+  let list = G.stats.hitchhikers || [];
+  if(list.find(h=>h.skill==='货运' && G.stats.mood>=40)) return 1.1;
+  return 1.0;
+}
+
+
 
 // Store pending drive info for mode selection
 let pendingDrive = null;
@@ -2311,11 +2442,16 @@ function actDrive(){
   let others = LOCATIONS.filter(l=>l.name!==G.location);
   if(others.length===0) return;
   if(G.stats.energy < 10){ addEvent('太累了，握方向盘的手都在抖。','bad'); return; }
+  checkHitchhikerDeparture();
 
   let dest = others[Math.floor(Math.random()*others.length)];
   let dist = Math.floor(Math.random()*20)+10;
   let fuelNeeded = dist * 0.1 * (G.fuelRate || 1);
   let fuelCost = Math.ceil(fuelNeeded); // 动力改装省油
+  // 修车技能减少车辆损坏概率(注：损坏效果暂未实现，预留)
+  let hasMechanic = (G.stats.hitchhikers||[]).find(h=>h.skill==='修车' && G.stats.mood>=40);
+  // 导航技能减少体力消耗
+  let navMod = getExploreEnergyMod(); // 导航搭车人-3体力探索消耗
   let elecCost = Math.ceil(dist*0.2); // 设计文档：10kWh/50km = 2kWh/10km
 
   if(G.fuel < fuelNeeded) {
@@ -2947,6 +3083,8 @@ function render(){
   if(canShop) actHtml += `<button class="action-btn" onclick="actShop()">逛${loc.hasShop}</button>`;
   actHtml += `<button class="action-btn" onclick="actListenRadio()">听收音机</button>`;
   if(!G.driving) actHtml += `<button class="action-btn" onclick="openModPanel()">🔧 改装</button>`;
+  let hCount = (G.stats.hitchhikers||[]).length;
+  if(hCount>0) actHtml += `<button class="action-btn" onclick="openHitchhikerPanel()">👤 ${hCount}名乘客</button>`;
   actHtml += `<br style="clear:both"><div style="height:6px"></div>`;
   // 第三行：升级和存档
   actHtml += `<button class="action-btn ${upgradeCheck.can?'primary':''}" onclick="showUpgradeModal()">升级房车${upgradeCheck.can?' (¥'+upgradeCheck.cost+')':''}</button>`;
@@ -2992,7 +3130,7 @@ function startNewGame(){
   G.time = 0;
   G.weather = 'light_rain';
   G.location = '鹿角湾';
-  G.stats = { hunger: 70, warmth: 65, energy: 80, mood: 50, radio: { signal: 80, currentBand: 'am', unlocked: true } };
+  G.stats = { hunger: 70, warmth: 65, energy: 80, mood: 50, food: 80, radio: { signal: 80, currentBand: 'am', unlocked: true }, hitchhikers: [] };
   G.money = 500;
   G.fuel = 40;
   G.water = rvData.waterCapacity;
