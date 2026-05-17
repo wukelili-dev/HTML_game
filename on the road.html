@@ -1034,6 +1034,21 @@ const GENERAL_EVENTS = {
       id: 'idle_singing',
       text: '不知道为什么，突然想唱歌。\n没什么观众，就唱了。\n跑调了也没关系。',
       effects: [{ type:'mood', value:2 }]
+    },
+    {
+      id: 'idle_phone_scroll',
+      text: '躺在床刷手机，一条接一条。\n也不知道看了些什么，半小时就没了。',
+      effects: [{ type:'mood', value:1 }, { type:'energy', value:-2 }]
+    },
+    {
+      id: 'idle_daydream',
+      text: '盯着天花板发呆。\n想起了小时候的事，又想起了还没去的地方。\n不知道哪天才到。',
+      effects: [{ type:'mood', value:-1 }]
+    },
+    {
+      id: 'idle_organize',
+      text: '实在无聊，开始收拾车厢。\n把东西重新归置了一遍，看着整齐多了。',
+      effects: [{ type:'mood', value:1 }, { type:'energy', value:-3 }]
     }
   ],
   
