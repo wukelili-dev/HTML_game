@@ -1996,6 +1996,34 @@ function actCook(){
       addEvent('储物里没有速食了，也没有厨房做饭。','warning');
       addEvent('你得去商店买点能直接吃的东西。','system');
     }
+    // 新食谱扩展
+    if(G.cookingIngredient==='野果') {
+      if(!hasItem('野果')) { addEvent('没有野果。','warning'); G.cookingIngredient=null; render(); return; }
+      removeItem('野果',1);
+      G.stats.food = clamp(G.stats.food + 10, 0, 100);
+      G.stats.mood = clamp(G.stats.mood + 3, 0, 100);
+      addEvent('野果洗了洗，一口一个。简单，但满足。','good');
+      finishCooking();
+      return;
+    }
+    if(G.cookingIngredient==='鲜鱼') {
+      if(!hasItem('鲜鱼')) { addEvent('没有鲜鱼。','warning'); G.cookingIngredient=null; render(); return; }
+      if(G.mods.kitchen < 1) { addEvent('没有厨房，只能生火烤。味道有点糊。','warning'); }
+      removeItem('鲜鱼',1);
+      G.stats.food = clamp(G.stats.food + 25, 0, 100);
+      G.stats.mood = clamp(G.stats.mood + 8, 0, 100);
+      addEvent('鱼烤得外焦里嫩，一个人吃完了整条。','good');
+      finishCooking();
+      return;
+    }
+    if(G.cookingIngredient==='大米' && hasItem('鲜鱼')) {
+      removeItem('大米',1); removeItem('鲜鱼',1);
+      G.stats.food = clamp(G.stats.food + 35, 0, 100);
+      G.stats.mood = clamp(G.stats.mood + 10, 0, 100);
+      addEvent('鱼汤泡饭，热气腾腾。吃完浑身暖和。','good');
+      finishCooking();
+      return;
+    }
     render();
   } catch(e){
     console.error('actCook error:', e);
