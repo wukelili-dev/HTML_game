@@ -1165,6 +1165,32 @@ const GENERAL_EVENTS = {
       text: '摸遍口袋——钥匙呢？\n翻遍了车厢也没找到。\n最后在冰箱里找到了。怎么放进去的？',
       effects: [{ type:'mood', value:-2 }, { type:'energy', value:-5 }]
     }
+  ],
+  food: [
+    {
+      id: 'food_wild_berries',
+      text: '路边长了一丛野果，红红的。\n你摘了一把，尝一个——甜的。',
+      effects: [{ type:'mood', value:2 }],
+      addItems: [{ name:'野果', icon:'🫐', desc:'路边摘的，有点酸但新鲜。', type:'ingredient', food:8, mood:3 }]
+    },
+    {
+      id: 'food_mushroom_no',
+      text: '树下有一片蘑菇，胖乎乎的很可爱。\n你想起"颜色鲜艳的别吃"，犹豫了一下，没摘。',
+      effects: [{ type:'mood', value:-1 }]
+    },
+    {
+      id: 'food_fish_hook',
+      text: '溪边看见鱼影子一闪。\n你有鱼钩——等了半小时，钓上来一条巴掌大的鱼。',
+      effects: [{ type:'mood', value:1 }],
+      condition: { hasItem:'鱼钩' },
+      addItems: [{ name:'鲜鱼', icon:'🐟', desc:'刚钓的，还活着。', type:'ingredient', food:25, mood:8 }]
+    },
+    {
+      id: 'food_fish_no_hook',
+      text: '溪边看见鱼影子一闪。\n没有鱼钩，只能看着流口水。',
+      effects: [{ type:'mood', value:0 }],
+      condition: { notHasItem:'鱼钩' }
+    }
   ]
 };
 
@@ -1826,6 +1852,10 @@ function actExplore(){
   addEvent('你推开车门，走了出去。','atmosphere');
   // 探索后触发懒人专属事件（10%概率）
   triggerGeneralEvent('idle', 0.1);
+  // 野外探索时食物事件（溪谷/雾松林，15%概率）
+  if((G.location==='溪谷营地'||G.location==='雾松林') && Math.random()<0.15){
+    triggerGeneralEvent('food', 1.0);
+  }
 
   setTimeout(()=>{
     // Find 1-3 items
@@ -1944,6 +1974,37 @@ function actCook(){
       if(ingredients.length>0){
         let name = ingredients[0];
         let it = ALL_ITEMS[name];
+        // 按具体食材分支
+        if(name==='野果') {
+          removeItem(name,1);
+          G.stats.food = clamp(G.stats.food + 10, 0, 100);
+          G.stats.mood = clamp(G.stats.mood + 3, 0, 100);
+          addEvent('野果洗了洗，一口一个。简单，但满足。','good');
+          advanceTime(0.5);
+          render(); return;
+        }
+        if(name==='鲜鱼' || name==='大米') {
+          // 组合烹饪：大米+鲜鱼
+          if(hasItem('大米') && hasItem('鲜鱼')) {
+            removeItem('大米',1); removeItem('鲜鱼',1);
+            G.stats.food = clamp(G.stats.food + 35, 0, 100);
+            G.stats.mood = clamp(G.stats.mood + 10, 0, 100);
+            addEvent('鱼汤泡饭，热气腾腾。吃完浑身暖和。','good');
+          } else if(name==='鲜鱼') {
+            removeItem('鲜鱼',1);
+            G.stats.food = clamp(G.stats.food + 25, 0, 100);
+            G.stats.mood = clamp(G.stats.mood + 8, 0, 100);
+            addEvent('鱼烤得外焦里嫩，一个人吃完了整条。','good');
+          } else {
+            removeItem('大米',1);
+            G.stats.food = clamp(G.stats.food + 20, 0, 100);
+            G.stats.mood = clamp(G.stats.mood + 5, 0, 100);
+            addEvent('白米饭，简单但顶饱。','good');
+          }
+          advanceTime(1);
+          render(); return;
+        }
+        // 通用食材烹饪
         removeItem(name);
         G.stats.hunger = clamp(G.stats.hunger + 50, 0, 100);
         G.stats.mood = clamp(G.stats.mood + 3, 0, 100);
@@ -1995,34 +2056,6 @@ function actCook(){
       }
       addEvent('储物里没有速食了，也没有厨房做饭。','warning');
       addEvent('你得去商店买点能直接吃的东西。','system');
-    }
-    // 新食谱扩展
-    if(G.cookingIngredient==='野果') {
-      if(!hasItem('野果')) { addEvent('没有野果。','warning'); G.cookingIngredient=null; render(); return; }
-      removeItem('野果',1);
-      G.stats.food = clamp(G.stats.food + 10, 0, 100);
-      G.stats.mood = clamp(G.stats.mood + 3, 0, 100);
-      addEvent('野果洗了洗，一口一个。简单，但满足。','good');
-      finishCooking();
-      return;
-    }
-    if(G.cookingIngredient==='鲜鱼') {
-      if(!hasItem('鲜鱼')) { addEvent('没有鲜鱼。','warning'); G.cookingIngredient=null; render(); return; }
-      if(G.mods.kitchen < 1) { addEvent('没有厨房，只能生火烤。味道有点糊。','warning'); }
-      removeItem('鲜鱼',1);
-      G.stats.food = clamp(G.stats.food + 25, 0, 100);
-      G.stats.mood = clamp(G.stats.mood + 8, 0, 100);
-      addEvent('鱼烤得外焦里嫩，一个人吃完了整条。','good');
-      finishCooking();
-      return;
-    }
-    if(G.cookingIngredient==='大米' && hasItem('鲜鱼')) {
-      removeItem('大米',1); removeItem('鲜鱼',1);
-      G.stats.food = clamp(G.stats.food + 35, 0, 100);
-      G.stats.mood = clamp(G.stats.mood + 10, 0, 100);
-      addEvent('鱼汤泡饭，热气腾腾。吃完浑身暖和。','good');
-      finishCooking();
-      return;
     }
     render();
   } catch(e){
