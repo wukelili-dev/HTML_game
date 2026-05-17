@@ -796,6 +796,55 @@ const GENERAL_EVENTS = {
         { text:'记下位置', effects:[{ type:'mood', value:0.5 }] },
         { text:'不感兴趣', effects:[] }
       ]
+    },
+    {
+      id: 'drive_rainstorm_choice',
+      text: '前方乌云压顶，雨点已经开始砸在挡风玻璃上。\n导航显示绕路要多走40公里，直行则要穿越暴雨区。',
+      choices: [
+        { text:'加速冲过去', effects:[{ type:'fuel', value:-15 }, { type:'bodyTemp', value:-3 }], random:[{ chance:0.4, effects:[{ type:'energy', value:-20 }] }] },
+        { text:'绕路走', effects:[{ type:'fuel', value:-25 }, { type:'mood', value:1 }] },
+        { text:'路边等雨停', effects:[{ type:'energy', value:5 }, { type:'fuel', value:-5 }] }
+      ]
+    },
+    {
+      id: 'drive_scenic_view',
+      text: '转过一个弯，眼前豁然开朗。\n远处的雪山在夕阳下泛着金光，云层像被点燃了一样。\n路边恰好有个观景台。',
+      choices: [
+        { text:'停下来看', effects:[{ type:'mood', value:3 }, { type:'energy', value:5 }, { type:'fuel', value:-3 }] },
+        { text:'赶路要紧', effects:[{ type:'mood', value:-0.5 }] }
+      ]
+    },
+    {
+      id: 'drive_road_sign',
+      text: '路边一块掉漆的路牌上写着：\n"前方3公里 有间面馆 老板娘手艺好"\n箭头指向一条小路。',
+      choices: [
+        { text:'拐进去试试', effects:[{ type:'hunger', value:25 }, { type:'money', value:-30 }, { type:'mood', value:2 }] },
+        { text:'不理会', effects:[] }
+      ]
+    },
+    {
+      id: 'drive_tire_blowout',
+      text: '"砰！"——右后轮爆了。\n车身猛地一晃，你死死握住方向盘稳住了。\n靠边停下，轮胎已经废了。',
+      choices: [
+        { text:'自己换备胎', effects:[{ type:'energy', value:-25 }, { type:'money', value:-80 }] },
+        { text:'叫救援', effects:[{ type:'money', value:-200 }, { type:'energy', value:-5 }] }
+      ]
+    },
+    {
+      id: 'drive_animal_crossing',
+      text: '一群羊慢悠悠地横穿公路。\n牧羊人在后面挥着鞭子，朝你歉意地笑了笑。\n只能等。',
+      choices: [
+        { text:'耐心等待', effects:[{ type:'mood', value:1 }, { type:'energy', value:3 }] },
+        { text:'按喇叭催', effects:[{ type:'mood', value:-1 }], random:[{ chance:0.3, effects:[{ type:'bodyTemp', value:-2 }] }] }
+      ]
+    },
+    {
+      id: 'drive_bad_signal',
+      text: '手机信号只剩一格，导航转圈转了半天。\n"当前位置：未知"\n前面有个岔路口，没有路牌。',
+      choices: [
+        { text:'凭感觉走左边', effects:[{ type:'fuel', value:-10 }], random:[{ chance:0.5, effects:[{ type:'mood', value:2 }] }, { chance:0.5, effects:[{ type:'fuel', value:-20 }, { type:'mood', value:-2 }] }] },
+        { text:'走右边', effects:[{ type:'fuel', value:-15 }], random:[{ chance:0.5, effects:[{ type:'mood', value:1 }] }, { chance:0.5, effects:[{ type:'mood', value:-1 }] }] }
+      ]
     }
   ],
   
