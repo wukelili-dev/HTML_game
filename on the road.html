@@ -1057,6 +1057,28 @@ const GENERAL_EVENTS = {
         { text:'找开锁师傅', effects:[{ type:'money', value:-200 }] },
         { text:'等路过的人帮忙', effects:[{ type:'time', value:3 }] }
       ]
+    },
+    {
+      id: 'trouble_window_crack',
+      text: '行驶中听到"咔"一声，侧窗裂了一条缝。\n风开始往里灌，呼呼的。',
+      choices: [
+        { text:'用胶带贴上', effects:[{ type:'money', value:-20 }, { type:'bodyTemp', value:-2 }] },
+        { text:'先不管', effects:[{ type:'bodyTemp', value:-5 }, { type:'mood', value:-1 }] }
+      ]
+    },
+    {
+      id: 'trouble_fridge_broken',
+      text: '打开小冰箱，一股馊味扑面而来。\n压缩机不转了，里面的东西全坏了。',
+      choices: [
+        { text:'扔掉坏的食物', effects:[{ type:'hunger', value:-10 }, { type:'mood', value:-2 }] },
+        { text:'还能凑合吃', effects:[{ type:'hunger', value:5 }], random:[{ chance:0.5, effects:[{ type:'energy', value:-15 }] }] }
+      ],
+      conditions: { rvLevelMax: 3 }
+    },
+    {
+      id: 'trouble_lost_keys',
+      text: '摸遍口袋——钥匙呢？\n翻遍了车厢也没找到。\n最后在冰箱里找到了。怎么放进去的？',
+      effects: [{ type:'mood', value:-2 }, { type:'energy', value:-5 }]
     }
   ]
 };
@@ -1755,10 +1777,21 @@ function actRest(){
   G.stats.hunger = clamp(G.stats.hunger - 5, 0, 100);
   // 休息时触发通用事件（30%概率）
   triggerGeneralEvent('rest', 0.3);
+  // 保温改装休息心情加成
+  if(G.restMoodBonus > 0){
+    G.stats.mood = clamp(G.stats.mood + G.restMoodBonus, 0, 100);
+    addEvent(G.restMoodBonus >= 2 ? '车厢里安静又温暖，睡得特别踏实。' : '隔音不错，比想象中睡得好。','good');
+  }
   // Rain rest bonus
   if(G.weather==='light_rain'){
     addEvent('雨声伴着你入睡，比任何时候都安稳。','good');
     G.stats.mood = clamp(G.stats.mood + 2, 0, 100);
+  }
+  // 电力消耗：保温Lv3(暖风机)休息时耗电
+  if((G.mods.insulation||0) >= 3 && G.battery > 0){
+    let drain = 3;
+    G.battery = clamp(G.battery - drain, 0, G.maxBattery);
+    addEvent(`🌡️ 暖风机运行，耗电${drain}kWh（${G.battery}/${G.maxBattery}kWh）。`,'system');
   }
   // 太阳能充电（休息直接充电，晴天+2/多云+1/其他+0）
   if(G.hasSolar && G.maxBattery > 0){
@@ -1801,6 +1834,12 @@ function actCook(){
         G.stats.mood = clamp(G.stats.mood + 3, 0, 100);
         advanceTime(1);
         addEvent(`你在厨房里做了一顿热乎乎的饭。${it.icon}${name}变成了美味的一餐。`,'good');
+        // 厨房Lv2+耗电（小冰箱+操作台）
+        if((G.mods.kitchen||0) >= 2 && G.battery > 0){
+          let drain = (G.mods.kitchen||0) >= 3 ? 5 : 2;
+          G.battery = clamp(G.battery - drain, 0, G.maxBattery);
+          addEvent(`🔋 厨房用电${drain}kWh（${G.battery}/${G.maxBattery}kWh）。`,'system');
+        }
         addEvent('热饭热菜，这才是活着的感觉。','good');
         render();
         return;
