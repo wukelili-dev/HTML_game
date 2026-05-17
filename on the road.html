@@ -2138,21 +2138,24 @@ function actCook(){
             G.stats.food = clamp(G.stats.food + 35, 0, 100);
             G.stats.mood = clamp(G.stats.mood + 10, 0, 100);
             addEvent('鱼汤泡饭，热气腾腾。吃完浑身暖和。','good');
+            advanceTime(1); applyCookingBonus(); render(); return;
           }
-          applyCookingBonus(); // 烹饪搭车人加成
+          // 单独鲜鱼
+          if(hasItem('鲜鱼')) {
             removeItem('鲜鱼',1);
             G.stats.food = clamp(G.stats.food + 25, 0, 100);
             G.stats.mood = clamp(G.stats.mood + 8, 0, 100);
             addEvent('鱼烤得外焦里嫩，一个人吃完了整条。','good');
+            advanceTime(1); applyCookingBonus(); render(); return;
           }
-          applyCookingBonus(); // 烹饪搭车人加成
+          // 单独大米
+          if(hasItem('大米')) {
             removeItem('大米',1);
             G.stats.food = clamp(G.stats.food + 20, 0, 100);
             G.stats.mood = clamp(G.stats.mood + 5, 0, 100);
             addEvent('白米饭，简单但顶饱。','good');
+            advanceTime(1); applyCookingBonus(); render(); return;
           }
-          advanceTime(1);
-          render(); return;
         }
         // 通用食材烹饪
         removeItem(name);
