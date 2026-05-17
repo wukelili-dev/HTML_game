@@ -281,6 +281,12 @@ const G = {
   battery: 0,
   maxBattery: 0,
   hasSolar: false,
+  fuelRate: 1,
+  warmthRetain: 0,
+  restMoodBonus: 0,
+  solarCharge: 0,
+  canPurify: false,
+  hasHotWater: false,
   storage: [],
   maxStorage: 8,
   wallSlots: [],
@@ -1168,6 +1174,26 @@ function applyModEffects(partKey) {
   if (partKey === 'cabin' || partKey === 'roof') {
     updateSlots();
   }
+  // 动力系统：油耗倍率
+  G.fuelRate = [1, 0.85, 0.85, 0.7][G.mods.engine || 0] || 1; // Lv2扩容不省油但续航+50%
+  G.maxFuel = [50, 50, 100, 100][G.mods.engine || 0] || 50; // Lv2+扩容油箱
+  // 电力系统
+  G.maxBattery = [0, 20, 40, 80][G.mods.electric || 0] || 0;
+  G.hasSolar = (G.mods.electric || 0) >= 2;
+  G.solarCharge = [0, 0, 8, 15][G.mods.electric || 0] || 0; // kWh/晴天小时
+  // 水路系统
+  G.maxWater = [20, 60, 60, 120][G.mods.water || 0] || 20;
+  G.canPurify = (G.mods.water || 0) >= 2;
+  G.hasHotWater = (G.mods.water || 0) >= 3;
+  // 保温隔音：体温流失减少 + 休息心情加成
+  G.warmthRetain = [0, 0.3, 0.5, 0.8][G.mods.insulation || 0] || 0; // 减少比例
+  G.restMoodBonus = [0, 0, 1, 2][G.mods.insulation || 0] || 0;
+  // 厨房设施：已由rvSlots.kitchen.enabled控制
+  // 卫浴设施：已由rvSlots.bath.enabled控制
+  // 车顶加装太阳能额外充电
+  if ((G.mods.roof || 0) >= 3) {
+    G.solarCharge = (G.solarCharge || 0) + 15;
+  }
 }
 
 function upgradeMod(partKey) {
@@ -1377,7 +1403,8 @@ function advanceTime(steps=1){
   }
   // Daily drain
   G.stats.hunger = clamp(G.stats.hunger - 3*steps, 0, 100);
-  G.stats.warmth = clamp(G.stats.warmth + (WEATHERS[G.weather].warmthMod*steps), 0, 100);
+  let warmthDrain = WEATHERS[G.weather].warmthMod * steps * (1 - (G.warmthRetain || 0));
+  G.stats.warmth = clamp(G.stats.warmth + warmthDrain, 0, 100);
   G.stats.energy = clamp(G.stats.energy - 2*steps, 0, 100);
   // Mood from weather
   G.stats.mood = clamp(G.stats.mood + WEATHERS[G.weather].moodMod*0.5*steps, 0, 100);
@@ -1875,7 +1902,7 @@ function actDrive(){
 
   let dest = others[Math.floor(Math.random()*others.length)];
   let dist = Math.floor(Math.random()*20)+10;
-  let fuelCost = Math.ceil(dist*0.1); // 设计文档：10L/100km = 1L/10km
+  let fuelCost = Math.ceil(dist*0.1 * (G.fuelRate || 1)); // 动力改装省油
   let elecCost = Math.ceil(dist*0.2); // 设计文档：10kWh/50km = 2kWh/10km
 
   let canFuel = G.fuel >= fuelCost;
@@ -2132,6 +2159,8 @@ function loadGame(){
     G.slotCount = car.baseSlots + Math.min((G.mods.cabin||0), car.maxCabinMod);
     const loadSlots = Object.keys(G.rvSlots).sort((a,b) => G.rvSlots[a].unlockLevel - G.rvSlots[b].unlockLevel);
     loadSlots.forEach((key, i) => { G.rvSlots[key].enabled = i < G.slotCount; });
+    // 重新应用改装效果到G变量
+    Object.keys(G.mods).forEach(k => applyModEffects(k));
     document.getElementById('event-log').innerHTML = '';
     addEvent('✓ 存档已读取。','system');
     addEvent(`第${G.day}天，你在${G.location}醒来。`,'atmosphere');
