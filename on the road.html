@@ -262,6 +262,8 @@ body{background:#fafafa;color:#333;font-family:'Noto Serif SC',serif;font-size:1
         <div class="info-row"><span>💧 水量</span><span class="val" id="val-water">20/20L</span></div>
         <div class="info-row" id="battery-row" style="display:none"><span>🔋 电池</span><div class="stat-bar" style="flex:1;margin:0 6px"><div class="stat-bar-fill energy" id="bar-battery" style="width:0%"></div></div><span class="val" id="val-battery">无</span></div>
         <div class="info-row"><span>📍 位置</span><span class="val" id="val-location">鹿角湾</span></div>
+        <div class="info-row"><span>🛣️ 里程</span><span class="val" id="val-distance">0km</span></div>
+        <div class="info-row"><span>🗺️ 探索</span><span class="val" id="val-explored">0/7</span></div>
       </div>
     </div>
   </div>
@@ -364,6 +366,9 @@ const G = {
   explored: false,
   driving: false,
   shopVisited: false,
+  // 驾驶里程系统
+  totalDistance: 0,  // 累计里程(公里)
+  visitedLocations: [], // 已探索地点列表
   // 车辆改装系统
   carType: 'van', // 当前车型: van/small_rv/medium_rv/large_rv
   mods: {
@@ -390,10 +395,10 @@ const RV_LEVELS = {
 
 // ==================== CAR TYPES ====================
 const CAR_TYPES = {
-  van:       { name:'面包车', icon:'🚐', price:3000,  baseSlots:2, maxCabinMod:1, maxStorage:8,  maxWall:0 },
-  small_rv:  { name:'小型房车', icon:'🚛', price:8000,  baseSlots:3, maxCabinMod:2, maxStorage:14, maxWall:2 },
-  medium_rv: { name:'中型房车', icon:'🚎', price:18000, baseSlots:4, maxCabinMod:3, maxStorage:22, maxWall:4 },
-  large_rv:  { name:'大型房车', icon:'🏠', price:35000, baseSlots:5, maxCabinMod:4, maxStorage:30, maxWall:6 }
+  van:       { name:'面包车', icon:'🚐', price:3000,  baseSlots:2, maxCabinMod:1, maxStorage:8,  maxWall:0, fuelRate:1.0, elecRate:1.0 },
+  small_rv:  { name:'小型房车', icon:'🚛', price:8000,  baseSlots:3, maxCabinMod:2, maxStorage:14, maxWall:2, fuelRate:1.3, elecRate:1.2 },
+  medium_rv: { name:'中型房车', icon:'🚎', price:18000, baseSlots:4, maxCabinMod:3, maxStorage:22, maxWall:4, fuelRate:1.8, elecRate:1.6 },
+  large_rv:  { name:'大型房车', icon:'🏠', price:35000, baseSlots:5, maxCabinMod:4, maxStorage:30, maxWall:6, fuelRate:2.5, elecRate:2.2 }
 };
 
 // ==================== MODIFICATIONS ====================
@@ -1623,6 +1628,21 @@ function checkModAchievements() {
     G.carDiscount = 0.9;
     addEvent('🚗 【成就：老司机】换了三次车，车商给你打九折。', 'special');
   }
+  // 千里之行：累计行驶1000km
+  if (!G.ach_thousandMiles && G.totalDistance >= 1000) {
+    G.ach_thousandMiles = true;
+    addEvent('🛣️ 【成就：千里之行】车轮碾过了一千公里的路。', 'special');
+  }
+  // 万里长征：累计行驶10000km
+  if (!G.ach_tenThousandMiles && G.totalDistance >= 10000) {
+    G.ach_tenThousandMiles = true;
+    addEvent('🚀 【成就：万里长征】一万公里的风景，都刻在了车窗里。', 'special');
+  }
+  // 地图达人：探索所有地点
+  if (!G.ach_mapMaster && G.visitedLocations.length >= LOCATIONS.length) {
+    G.ach_mapMaster = true;
+    addEvent('🗺️ 【成就：地图达人】这片土地的每一个角落都留下了你的车辙。', 'special');
+  }
 }
 
 // ==================== CORE FUNCTIONS ====================
@@ -2446,13 +2466,18 @@ function actDrive(){
 
   let dest = others[Math.floor(Math.random()*others.length)];
   let dist = Math.floor(Math.random()*20)+10;
-  let fuelNeeded = dist * 0.1 * (G.fuelRate || 1);
-  let fuelCost = Math.ceil(fuelNeeded); // 动力改装省油
+  // 车型油耗系数: van=1.0, small_rv=1.3, medium_rv=1.8, large_rv=2.5
+  let carFuelRate = CAR_TYPES[G.carType].fuelRate;
+  let fuelNeeded = dist * 0.1 * carFuelRate * (G.fuelRate || 1);
+  let fuelCost = Math.ceil(fuelNeeded);
   // 修车技能减少车辆损坏概率(注：损坏效果暂未实现，预留)
   let hasMechanic = (G.stats.hitchhikers||[]).find(h=>h.skill==='修车' && G.stats.mood>=40);
   // 导航技能减少体力消耗
   let navMod = getExploreEnergyMod(); // 导航搭车人-3体力探索消耗
-  let elecCost = Math.ceil(dist*0.2); // 设计文档：10kWh/50km = 2kWh/10km
+  // 车型电耗系数: van=1.0, small_rv=1.2, medium_rv=1.6, large_rv=2.2
+  // 基础电耗: 20kWh/100km = 0.2kWh/km
+  let carElecRate = CAR_TYPES[G.carType].elecRate;
+  let elecCost = Math.ceil(dist * 0.2 * carElecRate);
 
   if(G.fuel < fuelNeeded) {
     addEvent('油不够了，开不动。','warning');
@@ -2497,6 +2522,8 @@ function doDrive(mode){
   }
 
   G.location = dest.name;
+  G.totalDistance += dist; // 累计里程
+  if(!G.visitedLocations.includes(dest.name)) G.visitedLocations.push(dest.name); // 记录已探索地点
   advanceTime(2);
   G.stats.energy = clamp(G.stats.energy - 15, 0, 100);
   G.explored = false;
@@ -2981,6 +3008,9 @@ function render(){
     }
   }
   document.getElementById('val-location').textContent = G.location;
+  // 里程与探索数
+  document.getElementById('val-distance').textContent = G.totalDistance + 'km';
+  document.getElementById('val-explored').textContent = G.visitedLocations.length + '/' + LOCATIONS.length;
 
   // Weather
   let w = WEATHERS[G.weather];
