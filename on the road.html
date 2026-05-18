@@ -1800,9 +1800,26 @@ window.addEventListener('load', () => {
 
 // 手动等待函数
 function manualWait() {
-  advanceTime(1);
+  G.time++;
+  if(G.time >= 5){ G.time = 0; G.day++; newDay(); }
+  G.stats.hunger = clamp(G.stats.hunger - 3, 0, 100);
+  let warmthDrain = WEATHERS[G.weather].warmthMod * (1 - (G.warmthRetain || 0));
+  G.stats.warmth = clamp(G.stats.warmth + warmthDrain, 0, 100);
+  G.stats.energy = clamp(G.stats.energy - 2, 0, 100);
+  G.stats.mood = clamp(G.stats.mood + WEATHERS[G.weather].moodMod*0.5, 0, 100);
+  let rvData = RV_LEVELS[G.rvLevel];
+  let waterUsePerStep = (rvData.waterUse || 2) / 5;
+  G.water = clamp(G.water - waterUsePerStep, 0, G.maxWater);
+  let decoMood = 0;
+  for(let s in G.rvSlots){ if(G.rvSlots[s].item){ let it=ALL_ITEMS[G.rvSlots[s].item]; if(it&&it.type==='deco') decoMood+=it.moodEffect; } }
+  for(let w of G.wallSlots){ let it=ALL_ITEMS[w]; if(it&&it.moodEffect) decoMood+=it.moodEffect; }
+  G.stats.mood = clamp(G.stats.mood + decoMood*0.3, 0, 100);
+  if(G.water < 5) addEvent('水箱快见底了，得找地方加水。','warning');
+  if(G.water <= 0) G.stats.mood = clamp(G.stats.mood - 1, 0, 100);
+  if(G.stats.hunger < 20) G.stats.mood = clamp(G.stats.mood - 1, 0, 100);
+  if(G.stats.hunger < 10) addEvent('胃在抽筋，你饿得手在抖。','warning');
   render();
-  addEvent('你静坐等待，时间悄然流逝...', 'atmosphere');
+  addEvent('时间流逝，' + G.timeNames[G.time] + '了。', 'atmosphere');
 }
 
 function newDay(){
