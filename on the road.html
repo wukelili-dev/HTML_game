@@ -1768,6 +1768,34 @@ function advanceTime(steps=1){
   if(G.stats.hunger < 10) addEvent('胃在抽筋，你饿得手在抖。','warning');
 }
 
+// ==================== AUTO TIME PASSAGE ====================
+let autoTimeTimer = null;
+const AUTO_TIME_INTERVAL = 180000; // 3分钟真实时间 = 1个游戏时间步
+
+function startAutoTime() {
+  if (autoTimeTimer) return; // 已在运行
+  console.log('开始自动时间流逝...');
+  autoTimeTimer = setInterval(() => {
+    advanceTime(1);
+    render();
+  }, AUTO_TIME_INTERVAL);
+}
+
+function stopAutoTime() {
+  if (autoTimeTimer) {
+    clearInterval(autoTimeTimer);
+    autoTimeTimer = null;
+    console.log('停止自动时间流逝');
+  }
+}
+
+// 游戏加载时启动自动时间流逝
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    startAutoTime();
+  }, 1000); // 等待游戏初始化完成
+});
+
 function newDay(){
   // 记录之前是否下雨（用于事件条件）
   G.wasRaining = (G.weather === 'light_rain' || G.weather === 'heavy_rain' || G.weather === 'storm');
